@@ -1,0 +1,40 @@
+Python HMAC Sanity Check
+========================
+
+This library uses the libsodium routines by default for the C library.  This
+blurb walks through the first few steps of the README tutorial and checks that
+the signatures are the same when computed using the Python HMAC module.  We hard
+code the signatures here, so changes to the implementation or README will not be
+reflected here.  If you change either, you'll likely want to update this too.
+
+>>> secret = 'this is our super secret key; only we should know it'
+>>> public = 'we used our secret key'
+
+>>> import hashlib
+>>> import hmac
+>>> key = secret + '\x00' * (32 - len(secret))
+>>> key = key[:32]
+>>> key
+'this is our super secret key; on'
+>>> x = hmac.HMAC(key, digestmod=hashlib.sha256)
+>>> x.update(public)
+>>> x.hexdigest()
+'c60b4b3540bb1b2f2ef28d1c895691cc4a5e07a38a9d3b1c3379fb485293372f'
+
+>>> key = x.hexdigest().decode('hex')
+>>> x = hmac.HMAC(key, digestmod=hashlib.sha256)
+>>> x.update('account = 3735928559')
+>>> x.hexdigest()
+'5c933dc9a7d036dfcd1740b4f26d737397a1ff635eac900f3226973503caaaa5'
+
+>>> key = x.hexdigest().decode('hex')
+>>> x = hmac.HMAC(key, digestmod=hashlib.sha256)
+>>> x.update('time < 2015-01-01T00:00')
+>>> x.hexdigest()
+'7a559b20c8b607009ebce138c200585e9d0deca6d23b3ead6c5e0ba6861d3858'
+
+>>> key = x.hexdigest().decode('hex')
+>>> x = hmac.HMAC(key, digestmod=hashlib.sha256)
+>>> x.update('email = alice@example.org')
+>>> x.hexdigest()
+'e42bbb02a9a5a303483cb6295c497ae51ad1d5cb10003cbe548d907e7e62f5e4'

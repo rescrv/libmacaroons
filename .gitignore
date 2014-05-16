@@ -1,0 +1,29 @@
+# wildcards
+.deps
+.dirstamp
+*.la
+.libs
+*.lo
+*.o
+# specific files
+/aclocal.m4
+/autom4te.cache
+/bindings/python/macaroons.c
+/config.guess
+/config.h
+/config.h.in
+/config.h.in~
+/config.log
+/config.status
+/config.sub
+/configure
+/depcomp
+/install-sh
+/libmacaroons.pc
+/libtool
+/ltmain.sh
+/m4
+/Makefile
+/Makefile.in
+/missing
+/stamp-h1
