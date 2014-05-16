@@ -54,6 +54,9 @@ if ENABLE_JSON_SUPPORT
 libmacaroons_la_LIBADD += $(JSON_LIBS)
 endif
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libmacaroons.pc
+
 ##################################### Tests ####################################
 
 EXTRA_DIST += test/env.sh
