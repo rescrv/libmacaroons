@@ -43,7 +43,7 @@ EXTRA_DIST += LICENSE
 
 include_HEADERS = macaroons.h
 
-noinst_HEADERS = base64.h constants.h packet.h port.h
+noinst_HEADERS = base64.h constants.h custom-config.h packet.h port.h
 
 lib_LTLIBRARIES = libmacaroons.la
 
