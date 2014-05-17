@@ -66,6 +66,7 @@ fi
 AM_CONDITIONAL([ENABLE_PYTHON_BINDINGS], [test x"${python_bindings}" = xyes])
 AM_CONDITIONAL([ENABLE_JSON_SUPPORT], [test x"${json_support}" = xyes])
 
+AH_BOTTOM([#include <custom-config.h>])
 AC_CONFIG_FILES([Makefile
                  libmacaroons.pc])
 AC_OUTPUT

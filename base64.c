@@ -42,6 +42,10 @@
  * IF IBM IS APPRISED OF THE POSSIBILITY OF SUCH DAMAGES.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 /* c */
 #include <ctype.h>
 #include <stdlib.h>
