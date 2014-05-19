@@ -314,7 +314,7 @@ Hacker News discussions with vague, slightly inaccurate allusions to pbkdf2.
 
 So how can we tell our verifier that the caveat on access time is satisfied?  We
 could provide many exact caveats of the form ``time < YYYY-mm-ddTHH:MM'', but
-this reeks of inefficiency and seems like something a PHP programmer would do.
+this reeks of inefficiency and seems like something a junior programmer would do.
 The second technique for satisfying caveats provides a more general solution.
 
 Called ``general caveats'', the second technique for informing the verifier that
