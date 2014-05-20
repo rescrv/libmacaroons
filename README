@@ -13,7 +13,7 @@ Macaroons are great for authorization because they're similar enough to cookies
 to be immediately usable by developers, but they include several features not
 present in cookies or other token-based authorization schemes.  In particular:
 
- - Delegation with Contextual Caveats (i.e., limits on the usage context):  
+ - Delegation with Contextual Caveats (i.e., confinement of the usage context):  
    Macaroons support delegation.  Give your macaroon to another user, and they 
    can act on your behalf, with the same authority.  Cookies permit delegation 
    as well, but the remaining features of macaroons make it much more safe and
