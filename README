@@ -296,8 +296,13 @@ becomes trivial to change policy decisions about authorization.  The server
 performing authorization can treat the verifier as a black-box and does not need
 to change when changing the authorization policy.  The actual policy is enforced
 when macaroons are minted and when caveats are embedded.  In our banking
-example, we could future-proof the verifier, should the authorization policy for
-Alice change, by providing some additional satisfied caveats to the verifier:
+example, we could provide some additional satisfied caveats to the verifier,
+to describe some (or all) of the properties that are known about the current
+request.  In this manner, the verifier can be made more general, and be
+"future-proofed", so that it will still function correctly even if somehow  
+the authorization policy for Alice changes; for example, by adding the three
+following facts, the verifier will continue to work even if Alice decides to
+self-attenuate her macaroons to be only usable from her IP address and browser:
 
     >>> V.satisfy_exact('IP = 127.0.0.1')
     >>> V.satisfy_exact('browser = Chrome')
@@ -318,8 +323,8 @@ this reeks of inefficiency. The second technique for satisfying caveats provides
 a more general solution.
 
 Called ``general caveats'', the second technique for informing the verifier that
-a caveat is satisfied allows for expressive caveats.  Where exact caveats are
-checked by simple byte-wise equality, general caveats are check using an
+a caveat is satisfied allows for expressive caveats.  Whereas exact caveats are
+checked by simple byte-wise equality, general caveats are checked using an
 application-provided callback that returns true if and only if the caveat is
 true within the context of the request.  There's no limit on the contents of a
 general caveat, so long as the callback understands how to determine whether it
