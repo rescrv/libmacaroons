@@ -153,18 +153,18 @@ macaroon_body_size(const struct macaroon* M)
 }
 
 MACAROON_API struct macaroon*
-macaroon_create(const unsigned char* location, size_t location_sz,
-                const unsigned char* key, size_t key_sz,
-                const unsigned char* id, size_t id_sz,
-                enum macaroon_returncode* err)
+macaroon_create_raw(const unsigned char* location, size_t location_sz,
+                    const unsigned char* key, size_t key_sz,
+                    const unsigned char* id, size_t id_sz,
+                    enum macaroon_returncode* err)
 {
     unsigned char hash[MACAROON_HASH_BYTES];
     size_t sz;
     struct macaroon* M;
     unsigned char* ptr;
     assert(location_sz < MACAROON_MAX_STRLEN);
-    assert(key_sz < MACAROON_MAX_STRLEN);
     assert(id_sz < MACAROON_MAX_STRLEN);
+    assert(key_sz == MACAROON_SUGGESTED_SECRET_LENGTH);
 
     if (macaroon_hmac(key, key_sz, id, id_sz, hash) < 0)
     {
@@ -188,6 +188,34 @@ macaroon_create(const unsigned char* location, size_t location_sz,
     ptr = create_signature_packet(hash, &M->signature, ptr);
     VALIDATE(M);
     return M;
+}
+
+static int
+generate_fixed_key(const unsigned char* variable_key,
+                   size_t variable_key_sz,
+                   unsigned char* fixed_key)
+{
+    unsigned char genkey[MACAROON_HASH_BYTES];
+    sodium_memzero(genkey, MACAROON_HASH_BYTES);
+    memmove(genkey, "macaroons-key-generator", sizeof("macaroons-key-generator"));
+    return macaroon_hmac(genkey, MACAROON_HASH_BYTES, variable_key, variable_key_sz, fixed_key);
+}
+
+MACAROON_API struct macaroon*
+macaroon_create(const unsigned char* location, size_t location_sz,
+                const unsigned char* key, size_t key_sz,
+                const unsigned char* id, size_t id_sz,
+                enum macaroon_returncode* err)
+{
+    unsigned char fixed_key[MACAROON_HASH_BYTES];
+
+    if (generate_fixed_key(key, key_sz, fixed_key) < 0)
+    {
+        *err = MACAROON_HASH_FAILED;
+        return NULL;
+    }
+
+    return macaroon_create_raw(location, location_sz, fixed_key, MACAROON_HASH_BYTES, id, id_sz, err);
 }
 
 MACAROON_API void
@@ -304,11 +332,11 @@ macaroon_hash2(const unsigned char* key,
 #endif
 
 MACAROON_API struct macaroon*
-macaroon_add_third_party_caveat(const struct macaroon* N,
-                                const unsigned char* location, size_t location_sz,
-                                const unsigned char* key, size_t key_sz,
-                                const unsigned char* id, size_t id_sz,
-                                enum macaroon_returncode* err)
+macaroon_add_third_party_caveat_raw(const struct macaroon* N,
+                                    const unsigned char* location, size_t location_sz,
+                                    const unsigned char* key, size_t key_sz,
+                                    const unsigned char* id, size_t id_sz,
+                                    enum macaroon_returncode* err)
 {
     const unsigned char* old_key;
     unsigned char hash[MACAROON_HASH_BYTES];
@@ -323,8 +351,8 @@ macaroon_add_third_party_caveat(const struct macaroon* N,
     struct macaroon* M;
     unsigned char* ptr;
     assert(location_sz < MACAROON_MAX_STRLEN);
-    assert(key_sz < MACAROON_MAX_STRLEN);
     assert(id_sz < MACAROON_MAX_STRLEN);
+    assert(key_sz == MACAROON_SUGGESTED_SECRET_LENGTH);
     assert(N->signature.data && N->signature.size > PACKET_PREFIX);
     VALIDATE(N);
 
@@ -399,6 +427,24 @@ macaroon_add_third_party_caveat(const struct macaroon* N,
     ptr = create_signature_packet(hash, &M->signature, ptr);
     VALIDATE(M);
     return M;
+}
+
+MACAROON_API struct macaroon*
+macaroon_add_third_party_caveat(const struct macaroon* N,
+                                const unsigned char* location, size_t location_sz,
+                                const unsigned char* key, size_t key_sz,
+                                const unsigned char* id, size_t id_sz,
+                                enum macaroon_returncode* err)
+{
+    unsigned char fixed_key[MACAROON_HASH_BYTES];
+
+    if (generate_fixed_key(key, key_sz, fixed_key) < 0)
+    {
+        *err = MACAROON_HASH_FAILED;
+        return NULL;
+    }
+
+    return macaroon_add_third_party_caveat_raw(N, location, location_sz, fixed_key, MACAROON_HASH_BYTES, id, id_sz, err);
 }
 
 static int
@@ -835,11 +881,11 @@ macaroon_verify_inner(const struct macaroon_verifier* V,
 }
 
 MACAROON_API int
-macaroon_verify(const struct macaroon_verifier* V,
-                const struct macaroon* M,
-                const unsigned char* key, size_t key_sz,
-                struct macaroon** MS, size_t MS_sz,
-                enum macaroon_returncode* err)
+macaroon_verify_raw(const struct macaroon_verifier* V,
+                    const struct macaroon* M,
+                    const unsigned char* key, size_t key_sz,
+                    struct macaroon** MS, size_t MS_sz,
+                    enum macaroon_returncode* err)
 {
     int rc = 0;
     size_t i = 0;
@@ -858,10 +904,29 @@ macaroon_verify(const struct macaroon_verifier* V,
 
     tree[MS_sz] = MS_sz;
 
+    assert(key_sz == MACAROON_SUGGESTED_SECRET_LENGTH);
     rc = macaroon_verify_inner(V, M, M, key, key_sz,
                                MS, MS_sz, err, tree, 0);
     free(tree);
     return rc;
+}
+
+MACAROON_API int
+macaroon_verify(const struct macaroon_verifier* V,
+                const struct macaroon* M,
+                const unsigned char* key, size_t key_sz,
+                struct macaroon** MS, size_t MS_sz,
+                enum macaroon_returncode* err)
+{
+    unsigned char fixed_key[MACAROON_HASH_BYTES];
+
+    if (generate_fixed_key(key, key_sz, fixed_key) < 0)
+    {
+        *err = MACAROON_HASH_FAILED;
+        return -1;
+    }
+
+    return macaroon_verify_raw(V, M, fixed_key, MACAROON_HASH_BYTES, MS, MS_sz, err);
 }
 
 MACAROON_API void

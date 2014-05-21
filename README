@@ -143,14 +143,14 @@ Both of these pieces of information are publicly accessible:
     >>> M.location
     'http://mybank/'
     >>> M.signature
-    'c60b4b3540bb1b2f2ef28d1c895691cc4a5e07a38a9d3b1c3379fb485293372f'
+    'e3d9e02908526c4c0039ae15114115d97fdd68bf2ba379b342aaf0f617d0552f'
 
 We can share this macaroon with others by serializing it.  The serialized form
 is pure-ASCII, and is safe for inclusion in secure email, a standard HTTPS
 cookie, or a URL.   We can get the serialized form with:
 
     >>> M.serialize()
-    'MDAxY2xvY2F0aW9uIGh0dHA6Ly9teWJhbmsvCjAwMjZpZGVudGlmaWVyIHdlIHVzZWQgb3VyIHNlY3JldCBrZXkKMDAyZnNpZ25hdHVyZSDGC0s1QLsbLy7yjRyJVpHMSl4Ho4qdOxwzeftIUpM3Lwo='
+    'MDAxY2xvY2F0aW9uIGh0dHA6Ly9teWJhbmsvCjAwMjZpZGVudGlmaWVyIHdlIHVzZWQgb3VyIHNlY3JldCBrZXkKMDAyZnNpZ25hdHVyZSDj2eApCFJsTAA5rhURQRXZf91ovyujebNCqvD2F9BVLwo='
 
 Of course, this serialized form can be displayed in a more human-readable form
 for easy debugging:
@@ -158,7 +158,7 @@ for easy debugging:
     >>> print M.inspect()
     location http://mybank/
     identifier we used our secret key
-    signature c60b4b3540bb1b2f2ef28d1c895691cc4a5e07a38a9d3b1c3379fb485293372f
+    signature e3d9e02908526c4c0039ae15114115d97fdd68bf2ba379b342aaf0f617d0552f
 
 Adding Caveats
 --------------
@@ -181,24 +181,24 @@ macaroon:
     location http://mybank/
     identifier we used our secret key
     cid account = 3735928559
-    signature 5c933dc9a7d036dfcd1740b4f26d737397a1ff635eac900f3226973503caaaa5
+    signature 1efe4763f290dbce0c1d08477367e11f4eee456a64933cf662d79772dbb82128
 
 Of course, we can add a few more caveats, and the macaroon's signature will
 change with each of them.
 
     >>> M = M.add_first_party_caveat('time < 2015-01-01T00:00')
     >>> M.signature
-    '7a559b20c8b607009ebce138c200585e9d0deca6d23b3ead6c5e0ba6861d3858'
+    '696665d0229f9f801b588bb3f68bbdb806b26d1fbcd40ca22d9017bce4a075f1'
     >>> M = M.add_first_party_caveat('email = alice@example.org')
     >>> M.signature
-    'e42bbb02a9a5a303483cb6295c497ae51ad1d5cb10003cbe548d907e7e62f5e4'
+    '882e6d59496ed5245edb7ab5b8839ecd63e5d504e54839804f164070d8eed952'
     >>> print M.inspect()
     location http://mybank/
     identifier we used our secret key
     cid account = 3735928559
     cid time < 2015-01-01T00:00
     cid email = alice@example.org
-    signature e42bbb02a9a5a303483cb6295c497ae51ad1d5cb10003cbe548d907e7e62f5e4
+    signature 882e6d59496ed5245edb7ab5b8839ecd63e5d504e54839804f164070d8eed952
 
 The combination of all caveats in this macaroon authorize alice@example.org to
 access account 3735928559 until the end of 2014.  Alice may present this
@@ -238,7 +238,7 @@ form we can work with.
     cid account = 3735928559
     cid time < 2015-01-01T00:00
     cid email = alice@example.org
-    signature e42bbb02a9a5a303483cb6295c497ae51ad1d5cb10003cbe548d907e7e62f5e4
+    signature 882e6d59496ed5245edb7ab5b8839ecd63e5d504e54839804f164070d8eed952
 
 We have the same macaroon that Alice believes authorizes her to access her own
 account, but we must verify this for ourselves.  One (very flawed) way we could
@@ -438,7 +438,7 @@ limited to Alice's bank account.
     location http://mybank/
     identifier we used our other secret key
     cid account = 3735928559
-    signature fa51ac40c89ff9a719f6957e08b95aa604f05efe731924040ae300e851a06153
+    signature 1434e674ad84fdfdc9bc1aa00785325c8b6d57341fc7ce200ba4680c80786dda
 
 So far, so good.  Now let's add a third party caveat to this macaroon that
 requires that Alice authenticate with ``http://auth.mybank/'' before being
@@ -470,9 +470,9 @@ Here's what this looks like in code:
     identifier we used our other secret key
     cid account = 3735928559
     cid this was how we remind auth of key/pred
-    vid AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABHz4S8VLk1b4Uuxf9F/TNJPDdqTeblDRfEmGI0sDeGw7nkWy44pO8EBYzLJYzJbg
+    vid AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA027FAuBYhtHwJ58FX6UlVNFtFsGxQHS7uD/w/dedwv4Jjw7UorCREw5rXbRqIKhr
     cl http://auth.mybank/
-    signature 0a0b7ecbd2ddbb2ac6c9c6ab8f8f640115d1342d425b46429e77321ca3e5031a
+    signature 6b99edb2ec6d7a4382071d7d41a0bf7dfa27d87d2f9fea86e330d7850ffda2b2
 
 We now have a macaroon with a third-party caveat.  The most interesting thing to
 note about this macaroon is that it includes no information that reveals the
@@ -503,7 +503,7 @@ and return a new macaroon that discharges the caveat:
     location http://auth.mybank/
     identifier this was how we remind auth of key/pred
     cid time < 2015-01-01T00:00
-    signature cb61fff9d8cdbdd8e2a6cac8db54dad31031fd68b72591eda1248c8100b6ef07
+    signature 82a80681f9f32d419af12f6a71787a1bac3ab199df934ed950ddf20c25ac8c65
 
 This new macaroon enables the verifier to determine that the third party caveat
 is satisfied.  Our target service added a time-limiting caveat to this macaroon
@@ -526,9 +526,9 @@ If we were to look at the signatures on these prepared discharge macaroons, we
 would see that the binding process has irreversibly altered their signature(s).
 
     >>> D.signature
-    'cb61fff9d8cdbdd8e2a6cac8db54dad31031fd68b72591eda1248c8100b6ef07'
+    '82a80681f9f32d419af12f6a71787a1bac3ab199df934ed950ddf20c25ac8c65'
     >>> DP.signature
-    '92f90ad6035d10106ce598f22498d204ef4d33cf8de12800983fd00c80c638f5'
+    'b38b26ab29d3724e728427e758cccc16d9d7f3de46d0d811b70b117b05357b9b'
 
 The root macaroon ``M'' and its discharge macaroons ``MS'' are ready for the
 request.  Alice can serialize them all and send them to the bank to prove she is
