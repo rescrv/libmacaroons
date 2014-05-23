@@ -569,7 +569,8 @@ To generate a suitable key is very simple using the python standard library:
    >>> binascii.hexlify(os.urandom(macaroons.SUGGESTED_SECRET_LENGTH))
    b'f476...cc'
    
-Which gives a long string of hex bytes which can be passed into 
+Which gives a long string of hex bytes which can be passed into the create and
+validate functions as-is.
 
 Third-Party Caveats with Public Keys
 ------------------------------------
