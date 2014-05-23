@@ -91,8 +91,10 @@ macaroon_hmac(const unsigned char* _key, size_t _key_sz,
     int rc;
     unsigned char key[crypto_auth_hmacsha256_KEYBYTES];
 
+    assert(_key_sz <= sizeof(key));
+
     sodium_memzero(key, crypto_auth_hmacsha256_BYTES);
-    memmove(key, _key, _key_sz < sizeof(key) ? _key_sz : sizeof(key));
+    memmove(key, _key, _key_sz);
     rc = crypto_auth_hmacsha256(hash, text, text_sz, key);
     assert(rc == 0);
     return 0;
