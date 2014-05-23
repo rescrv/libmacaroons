@@ -191,14 +191,14 @@ macaroon_create_raw(const unsigned char* location, size_t location_sz,
 }
 
 static int
-generate_fixed_key(const unsigned char* variable_key,
-                   size_t variable_key_sz,
-                   unsigned char* fixed_key)
+generate_derived_key(const unsigned char* variable_key,
+                     size_t variable_key_sz,
+                     unsigned char* derived_key)
 {
     unsigned char genkey[MACAROON_HASH_BYTES];
     sodium_memzero(genkey, MACAROON_HASH_BYTES);
     memmove(genkey, "macaroons-key-generator", sizeof("macaroons-key-generator"));
-    return macaroon_hmac(genkey, MACAROON_HASH_BYTES, variable_key, variable_key_sz, fixed_key);
+    return macaroon_hmac(genkey, MACAROON_HASH_BYTES, variable_key, variable_key_sz, derived_key);
 }
 
 MACAROON_API struct macaroon*
@@ -207,15 +207,15 @@ macaroon_create(const unsigned char* location, size_t location_sz,
                 const unsigned char* id, size_t id_sz,
                 enum macaroon_returncode* err)
 {
-    unsigned char fixed_key[MACAROON_HASH_BYTES];
+    unsigned char derived_key[MACAROON_HASH_BYTES];
 
-    if (generate_fixed_key(key, key_sz, fixed_key) < 0)
+    if (generate_derived_key(key, key_sz, derived_key) < 0)
     {
         *err = MACAROON_HASH_FAILED;
         return NULL;
     }
 
-    return macaroon_create_raw(location, location_sz, fixed_key, MACAROON_HASH_BYTES, id, id_sz, err);
+    return macaroon_create_raw(location, location_sz, derived_key, MACAROON_HASH_BYTES, id, id_sz, err);
 }
 
 MACAROON_API void
@@ -436,15 +436,15 @@ macaroon_add_third_party_caveat(const struct macaroon* N,
                                 const unsigned char* id, size_t id_sz,
                                 enum macaroon_returncode* err)
 {
-    unsigned char fixed_key[MACAROON_HASH_BYTES];
+    unsigned char derived_key[MACAROON_HASH_BYTES];
 
-    if (generate_fixed_key(key, key_sz, fixed_key) < 0)
+    if (generate_derived_key(key, key_sz, derived_key) < 0)
     {
         *err = MACAROON_HASH_FAILED;
         return NULL;
     }
 
-    return macaroon_add_third_party_caveat_raw(N, location, location_sz, fixed_key, MACAROON_HASH_BYTES, id, id_sz, err);
+    return macaroon_add_third_party_caveat_raw(N, location, location_sz, derived_key, MACAROON_HASH_BYTES, id, id_sz, err);
 }
 
 static int
@@ -918,15 +918,15 @@ macaroon_verify(const struct macaroon_verifier* V,
                 struct macaroon** MS, size_t MS_sz,
                 enum macaroon_returncode* err)
 {
-    unsigned char fixed_key[MACAROON_HASH_BYTES];
+    unsigned char derived_key[MACAROON_HASH_BYTES];
 
-    if (generate_fixed_key(key, key_sz, fixed_key) < 0)
+    if (generate_derived_key(key, key_sz, derived_key) < 0)
     {
         *err = MACAROON_HASH_FAILED;
         return -1;
     }
 
-    return macaroon_verify_raw(V, M, fixed_key, MACAROON_HASH_BYTES, MS, MS_sz, err);
+    return macaroon_verify_raw(V, M, derived_key, MACAROON_HASH_BYTES, MS, MS_sz, err);
 }
 
 MACAROON_API void
