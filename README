@@ -269,7 +269,8 @@ our verifier cannot prove that any of the caveats we've added are satisfied.  We
 can see that it fails just as we would expect:
 
     >>> V.verify(M, secret)
-    False
+    Traceback (most recent call last):
+    Unauthorized: macaroon not authorized
 
 We can inform the verifier of the caveats used by our application using two
 different techniques.  The first technique is to directly provide the verifier
@@ -384,16 +385,19 @@ The verifier we've built will reject all of these scenarios:
     >>> # Unknown caveat
     >>> N = M.add_first_party_caveat('OS = Windows XP')
     >>> V.verify(N, secret)
-    False
+    Traceback (most recent call last):
+    Unauthorized: macaroon not authorized
 
     >>> # False caveat
     >>> N = M.add_first_party_caveat('time < 2014-01-01T00:00')
     >>> V.verify(N, secret)
-    False
+    Traceback (most recent call last):
+    Unauthorized: macaroon not authorized
 
     >>> # Bad secret
     >>> V.verify(M, 'this is not the secret we were looking for')
-    False
+    Traceback (most recent call last):
+    Unauthorized: macaroon not authorized
 
     >>> # Incompetent hackers trying to change the signature
     >>> N = macaroons.deserialize('MDAxY2xvY2F0aW9uIGh0dHA6Ly9teWJhbmsvCjAwMjZpZGVudGlmaWVyIHdlIHVzZWQgb3VyIHNl\nY3JldCBrZXkKMDAxZGNpZCBhY2NvdW50ID0gMzczNTkyODU1OQowMDIwY2lkIHRpbWUgPCAyMDE1\nLTAxLTAxVDAwOjAwCjAwMjJjaWQgZW1haWwgPSBhbGljZUBleGFtcGxlLm9yZwowMDJmc2lnbmF0\ndXJlID8f19FL+bkC9p/aoMmIecC7GxdOcLVyUnrv6lJMM7NSCg==')
@@ -407,7 +411,8 @@ The verifier we've built will reject all of these scenarios:
     >>> M.signature == N.signature
     False
     >>> V.verify(N, secret)
-    False
+    Traceback (most recent call last):
+    Unauthorized: macaroon not authorized
 
 Using Third-Party Caveats
 -------------------------
@@ -542,7 +547,8 @@ argument to the verify call:
 Without the ``prepare_for_request'' call, the verification would fail:
 
     >>> V.verify(M, secret, [D])
-    False
+    Traceback (most recent call last):
+    Unauthorized: macaroon not authorized
 
 Choosing Secrets
 ----------------

@@ -81,6 +81,7 @@ SUGGESTED_SECRET_LENGTH = 32
 
 
 class MacaroonError(Exception): pass
+class Unauthorized(Exception): pass
 
 
 cdef raise_error(macaroon_returncode err):
@@ -291,6 +292,12 @@ cdef class Verifier:
         self._funcs.append(func)
 
     def verify(self, Macaroon M, bytes key, MS=None):
+        if self.verify_unsafe(M, key, MS):
+            return True
+        else:
+            raise Unauthorized("macaroon not authorized")
+
+    def verify_unsafe(self, Macaroon M, bytes key, MS=None):
         cdef macaroon_returncode err
         cdef macaroon** discharges = NULL
         cdef Macaroon tmp
