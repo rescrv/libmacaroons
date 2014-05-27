@@ -572,8 +572,8 @@ To generate a suitable key is very simple using the python standard library:
 
    >>> import os
    >>> import binascii
-   >>> binascii.hexlify(os.urandom(macaroons.SUGGESTED_SECRET_LENGTH))
-   b'f476...cc'
+   >>> binascii.hexlify(os.urandom(macaroons.SUGGESTED_SECRET_LENGTH)) # doctest: +ELLIPSIS
+   '...'
    
 Which gives a long string of hex bytes which can be passed into the create and
 validate functions as-is.
