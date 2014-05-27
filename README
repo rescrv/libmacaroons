@@ -109,10 +109,11 @@ We've created our first macaroon!
 
 You can see here that it took three pieces of information to create a macaroon.
 We start with a secret.  Here, we just have English text, but in reality we
-would want to use something more random and less predictable.  The public
-portion tells us which secret we used to create the macaroon, but doesn't give
-anyone else a clue as to the contents of the secret.  Anyone in possession of
-the macaroon can see the public portion:
+would want to use something more random and less predictable (see below for a
+suggestion on how to generate one).  The public portion tells us which secret we
+used to create the macaroon, but doesn't give anyone else a clue as to the
+contents of the secret.  Anyone in possession of the macaroon can see the public
+portion:
 
     >>> M.identifier
     'we used our secret key'
@@ -563,10 +564,19 @@ before the macaroon falls out of use.
 
 The macaroons module exposes a constant that is the ideal number of bytes these
 secret keys should contain.  Any shorter is wasting an opportunity for security.
-Any longer, and the key itself will be truncated.
 
     >>> macaroons.SUGGESTED_SECRET_LENGTH
     32
+    
+To generate a suitable key is very simple using the python standard library:
+
+   >>> import os
+   >>> import binascii
+   >>> binascii.hexlify(os.urandom(macaroons.SUGGESTED_SECRET_LENGTH))
+   b'f476...cc'
+   
+Which gives a long string of hex bytes which can be passed into the create and
+validate functions as-is.
 
 Third-Party Caveats with Public Keys
 ------------------------------------
