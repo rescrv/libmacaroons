@@ -52,7 +52,7 @@ struct macaroon_verifier;
 
 enum macaroon_returncode
 {
-    MACAROON_SUCCESS          = 2048,
+    MACAROON_SUCCESS          = 0,
     MACAROON_OUT_OF_MEMORY    = 2049,
     MACAROON_HASH_FAILED      = 2050,
     MACAROON_INVALID          = 2051,

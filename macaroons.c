@@ -876,7 +876,10 @@ macaroon_verify_inner(const struct macaroon_verifier* V,
     data = M->signature.data;
     tree_fail |= parse_signature_packet(&M->signature, &data);
     tree_fail |= macaroon_memcmp(data, csig, MACAROON_HASH_BYTES);
-    *err = MACAROON_NOT_AUTHORIZED;
+    if (tree_fail)
+    {
+        *err = MACAROON_NOT_AUTHORIZED;
+    }
     return tree_fail;
 }
 
@@ -1040,7 +1043,14 @@ macaroon_serialize(const struct macaroon* M,
     ptr = serialize_packet(&M->signature, ptr);
     rc = b64_ntop(tmp, ptr - tmp, data, data_sz);
     free(tmp);
-    return rc >= 0 ? 0 : -1;
+
+    if (rc < 0)
+    {
+        *err = MACAROON_BUF_TOO_SMALL;
+        return -1;
+    }
+
+    return 0;
 }
 
 #ifdef MACAROONS_JSON_SUPPORT
@@ -1549,6 +1559,7 @@ macaroon_deserialize(const char* _data, enum macaroon_returncode* err)
         return NULL;
     }
 
+    *err = MACAROON_SUCCESS;
     return M;
 }
 
