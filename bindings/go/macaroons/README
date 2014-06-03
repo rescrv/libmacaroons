@@ -1,0 +1,30 @@
+Go bindings for libmacaroons
+============================
+
+Build
+-----
+Assumes libsodium headers in your system include path. libmacaroons headers are
+included from a relative path in the source distribution.
+
+$ go build .
+
+Test
+----
+
+Dependencies
+~~~~~~~~~~~~
+
+Requires libsodium.so.4 and libmacaroons.so.0 in your LD_LIBRARY_PATH. With
+libsodium in your system library path, and libmacaroons compiled in this source
+tree, you can set:
+
+$ export LD_LIBRARY_PATH=../../../.libs
+
+Requires Gustavo Niemeyer's gocheck package. Install into your GOPATH with:
+
+$ go get gopkg.in/check.v1
+
+Now you're ready to test:
+
+$ go test .
+
