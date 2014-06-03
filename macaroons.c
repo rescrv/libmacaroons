@@ -876,10 +876,6 @@ macaroon_verify_inner(const struct macaroon_verifier* V,
     data = M->signature.data;
     tree_fail |= parse_signature_packet(&M->signature, &data);
     tree_fail |= macaroon_memcmp(data, csig, MACAROON_HASH_BYTES);
-    if (tree_fail)
-    {
-        *err = MACAROON_NOT_AUTHORIZED;
-    }
     return tree_fail;
 }
 
@@ -910,6 +906,11 @@ macaroon_verify_raw(const struct macaroon_verifier* V,
     assert(key_sz == MACAROON_SUGGESTED_SECRET_LENGTH);
     rc = macaroon_verify_inner(V, M, M, key, key_sz,
                                MS, MS_sz, err, tree, 0);
+    if (rc)
+    {
+        *err = MACAROON_NOT_AUTHORIZED;
+    }
+
     free(tree);
     return rc;
 }
