@@ -14,12 +14,12 @@ to be immediately usable by developers, but they include several features not
 present in cookies or other token-based authorization schemes.  In particular:
 
  - Delegation with Contextual Caveats (i.e., confinement of the usage context):  
-   Macaroons support delegation.  Give your macaroon to another user, and they 
-   can act on your behalf, with the same authority.  Cookies permit delegation 
+   Macaroons support delegation.  Give your macaroon to another user, and they
+   can act on your behalf, with the same authority.  Cookies permit delegation
    as well, but the remaining features of macaroons make it much more safe and
    practical to pass around macaroons than cookies.  In particular, macaroons
    can limit when, where, and by whom the delegated authority can be exercised
-   (e.g., within one minute, from a machine that holds a certain key, or by a 
+   (e.g., within one minute, from a machine that holds a certain key, or by a
    certain logged-in user), by using attenuation and third-party caveats.
 
  - Attenuation:  Macaroons enable users to add caveats to the macaroon that
@@ -223,7 +223,7 @@ verification.  First, we construct a verifier that can determine whether the
 caveats on macaroons are satisfied.  We can then use our verifier to determine
 whether a given macaroon is authorized in the context of the request.  For
 example, our bank account application knows the account number specified in the
-request, and can specify ``account = #'' when building the verifier.  The
+request, and can specify 'account = #' when building the verifier.  The
 verifier can then check that this matches the information within the macaroon,
 and authorize the macaroon if it does indeed match.
 
@@ -260,7 +260,7 @@ multiple macaroons.
 Let's go ahead and try to verify the macaroon to see if the request is
 authorized.  To verify the request, we need to provide the verifier with Alice's
 macaroon, and the secret that was used to construct it.  In a real application,
-we would retrieve the secret using ``M.identifier''; here, we know the secret
+we would retrieve the secret using 'M.identifier;' here, we know the secret
 and provide it directly.  A verifier can only ever successfully verify the
 macaroon when provided with the macaroon and its corresponding secret---no
 secret, no authorization.
@@ -284,10 +284,10 @@ directly about these caveats like so:
     >>> V.satisfy_exact('account = 3735928559')
     >>> V.satisfy_exact('email = alice@example.org')
 
-Caveats like these are called ``exact caveats'' because there is exactly one way
+Caveats like these are called 'exact caveats' because there is exactly one way
 to satisfy them.  Either the account number is 3735928559, or it isn't.  At
 verification time, the verifier will check each caveat in the macaroon against
-the list of satisfied caveats provided to ``satisfy_exact''.  When it finds a
+the list of satisfied caveats provided to 'satisfy_exact'.  When it finds a
 match, it knows that the caveat holds and it can move onto the next caveat in
 the macaroon.
 
@@ -313,18 +313,18 @@ self-attenuate her macaroons to be only usable from her IP address and browser:
 Although it's always possible to satisfy a caveat within a macaroon by providing
 it directly to the verifier, doing so can be quite tedious.  Consider the caveat
 on access time embedded within Alice's macaroon.  While an authorization routine
-could provide the exact caveat ``time < 2015-01-01T00:00'', doing so would
+could provide the exact caveat 'time < 2015-01-01T00:00', doing so would
 require inspecting the macaroon before building the verifier.  Just like using
 MD5 to hash passwords, inspecting a macaroon's structure to build a verifier for
 it is considered to be very bad practice, and should be violently demonized in
 Hacker News discussions with vague, slightly inaccurate allusions to pbkdf2.
 
 So how can we tell our verifier that the caveat on access time is satisfied?  We
-could provide many exact caveats of the form ``time < YYYY-mm-ddTHH:MM'', but
+could provide many exact caveats of the form 'time < YYYY-mm-ddTHH:MM', but
 this reeks of inefficiency. The second technique for satisfying caveats provides
 a more general solution.
 
-Called ``general caveats'', the second technique for informing the verifier that
+Called 'general caveats', the second technique for informing the verifier that
 a caveat is satisfied allows for expressive caveats.  Whereas exact caveats are
 checked by simple byte-wise equality, general caveats are checked using an
 application-provided callback that returns true if and only if the caveat is
@@ -347,7 +347,7 @@ checks the current time against the time specified by the caveat:
     ...         return False
     ...
 
-This callback processes all caveats that begin with ``time < '', and returns
+This callback processes all caveats that begin with 'time < ', and returns
 True if the specified time has not yet passed.  We can see that our caveat does
 indeed return True when the caveat holds, and False otherwise:
 
@@ -358,7 +358,7 @@ indeed return True when the caveat holds, and False otherwise:
     >>> check_time('account = 3735928559')
     False
 
-We can provide the ``check_time'' function directly to the verifier, so that it
+We can provide the 'check_time' function directly to the verifier, so that it
 may check time-based predicates.
 
     >>> V.satisfy_general(check_time)
@@ -447,7 +447,7 @@ limited to Alice's bank account.
     signature 1434e674ad84fdfdc9bc1aa00785325c8b6d57341fc7ce200ba4680c80786dda
 
 So far, so good.  Now let's add a third party caveat to this macaroon that
-requires that Alice authenticate with ``http://auth.mybank/'' before being
+requires that Alice authenticate with 'http://auth.mybank/' before being
 authorized access to her account.  To add a third-party caveat we'll need to
 specify a location hint, generate a secret, and somehow be able to identify this
 secret later.  Like the location used when creating a macaroon, the location
@@ -456,7 +456,7 @@ is uninterpreted by libmacaroons.
 
 The secret and identity are handled differently than during creation, however,
 because they need to be known to the third party.  To do this, we'll provide the
-third-party with a randomly generated ``caveat_key'' and the predicate we wish
+third-party with a randomly generated 'caveat_key' and the predicate we wish
 for it to check.  In response, it will give us an identifier that we can embed
 within the macaroon.  Later, when we need to construct a discharge macaroon, we
 can provide it with just this identifier, from which it can recall the key and
@@ -485,7 +485,7 @@ note about this macaroon is that it includes no information that reveals the
 predicate it encodes.  The third-party service knows the key and the predicate,
 and internally associates them with the identifier, but the identifier itself is
 arbitrary and betrays no information about the predicate to others.  The service
-at ``http://auth.mybank/'' can authenticate that the user is Alice, and provide
+at 'http://auth.mybank/' can authenticate that the user is Alice, and provide
 proof that the caveat is satisfied, without revealing Alice's identity.  Other
 services can verify M and its associated discharge macaroon, without knowing the
 predicates the third-parties verified.
@@ -536,7 +536,7 @@ would see that the binding process has irreversibly altered their signature(s).
     >>> DP.signature
     'b38b26ab29d3724e728427e758cccc16d9d7f3de46d0d811b70b117b05357b9b'
 
-The root macaroon ``M'' and its discharge macaroons ``MS'' are ready for the
+The root macaroon 'M`` and its discharge macaroons ``MS' are ready for the
 request.  Alice can serialize them all and send them to the bank to prove she is
 authorized to access her account.  The bank can verify them using the same
 verifier we built before.  We provide the discharge macaroons as a third
@@ -545,7 +545,7 @@ argument to the verify call:
     >>> V.verify(M, secret, [DP])
     True
 
-Without the ``prepare_for_request'' call, the verification would fail:
+Without the 'prepare_for_request' call, the verification would fail:
 
     >>> V.verify(M, secret, [D])
     Traceback (most recent call last):
@@ -567,14 +567,14 @@ secret keys should contain.  Any shorter is wasting an opportunity for security.
 
     >>> macaroons.SUGGESTED_SECRET_LENGTH
     32
-    
+
 To generate a suitable key is very simple using the python standard library:
 
-   >>> import os
-   >>> import binascii
-   >>> binascii.hexlify(os.urandom(macaroons.SUGGESTED_SECRET_LENGTH)) # doctest: +ELLIPSIS
-   '...'
-   
+    >>> import os
+    >>> import binascii
+    >>> binascii.hexlify(os.urandom(macaroons.SUGGESTED_SECRET_LENGTH)) # doctest: +ELLIPSIS
+    '...'
+
 Which gives a long string of hex bytes which can be passed into the create and
 validate functions as-is.
 
