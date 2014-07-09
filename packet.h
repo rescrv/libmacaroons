@@ -75,8 +75,6 @@ copy_packet(const struct packet* from,
 unsigned char*
 serialize_packet(const struct packet* from,
                  unsigned char* ptr);
-char*
-inspect_packet(const struct packet* from, char* ptr);
 int
 copy_if_parses(const unsigned char** rptr,
                const unsigned char* const end,
@@ -103,7 +101,7 @@ parse_identifier_packet(const struct packet* pkt,
 
 /* create a signature packet */
 unsigned char*
-create_signature_packet(const unsigned char* signature,
+create_signature_packet(const unsigned char* signature, size_t sig_sz,
                         struct packet* pkt, unsigned char* ptr);
 int
 parse_signature_packet(const struct packet* pkt,
