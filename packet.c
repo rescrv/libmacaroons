@@ -188,13 +188,6 @@ serialize_packet(const struct packet* from,
     return ptr + from->size;
 }
 
-char*
-inspect_packet(const struct packet* from, char* ptr)
-{
-    memmove(ptr, from->data + PACKET_PREFIX, from->size - PACKET_PREFIX);
-    return ptr + from->size - PACKET_PREFIX;
-}
-
 int
 copy_if_parses(const unsigned char** rptr,
                const unsigned char* const end,
@@ -285,11 +278,11 @@ parse_identifier_packet(const struct packet* packet,
 }
 
 unsigned char*
-create_signature_packet(const unsigned char* signature,
+create_signature_packet(const unsigned char* signature, size_t signature_sz,
                         struct packet* pkt, unsigned char* ptr)
 {
     return create_kv_packet((const unsigned char*)SIGNATURE, SIGNATURE_SZ,
-                            signature, MACAROON_HASH_BYTES, pkt, ptr);
+                            signature, signature_sz, pkt, ptr);
 }
 
 int

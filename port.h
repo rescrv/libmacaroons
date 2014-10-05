@@ -33,7 +33,17 @@
 
 #define MACAROON_SECRET_KEY_BYTES 32U
 #define MACAROON_SECRET_NONCE_BYTES 24U
+
+/*
+ * The number of zero bytes required by crypto_secretbox
+ * before the plaintext.
+ */
 #define MACAROON_SECRET_TEXT_ZERO_BYTES 32U
+
+/*
+ * The number of zero bytes placed by crypto_secretbox
+ * before the ciphertext
+ */
 #define MACAROON_SECRET_BOX_ZERO_BYTES 16U
 
 void

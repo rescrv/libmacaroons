@@ -131,7 +131,10 @@ macaroon_hex2bin(const char* hex, size_t hex_sz, unsigned char* bin)
     const char* tmp = NULL;
     unsigned byte;
 
-    assert(!(hex_sz & 1));
+    if(hex_sz & 1)
+    {
+        return -1;
+    }
 
     for (idx = 0; idx < hex_sz; idx += 2)
     {
