@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python -m doctest "${MACAROONS_SRCDIR}/README"
+python2 -m doctest "${MACAROONS_SRCDIR}/README"

@@ -196,7 +196,7 @@ generate_derived_key(const unsigned char* variable_key,
                      unsigned char* derived_key)
 {
     unsigned char genkey[MACAROON_HASH_BYTES];
-    sodium_memzero(genkey, MACAROON_HASH_BYTES);
+    macaroon_memzero(genkey, MACAROON_HASH_BYTES);
     memmove(genkey, "macaroons-key-generator", sizeof("macaroons-key-generator"));
     return macaroon_hmac(genkey, MACAROON_HASH_BYTES, variable_key, variable_key_sz, derived_key);
 }
@@ -984,8 +984,9 @@ encoded_size(enum encoding encoding, size_t data_sz)
         return (data_sz + 2) / 3 * 4;
     case ENCODING_RAW:
         return data_sz;
+    default:
+        assert(0);
     }
-    assert(0);
 }
 
 /*
@@ -1000,8 +1001,8 @@ encode(enum encoding encoding,
        const unsigned char** result, size_t* result_sz,
        enum macaroon_returncode* err)
 {
-    unsigned char* enc;
-    size_t enc_sz;
+    char* enc;
+    int enc_sz;
     if (encoding == ENCODING_RAW) {
         *result = val;
         *result_sz = val_sz;
@@ -1009,7 +1010,7 @@ encode(enum encoding encoding,
     }
     enc_sz = encoded_size(encoding, val_sz);
     enc = malloc(enc_sz + 1);
-    if (*result == NULL)
+    if (enc == NULL)
     {
         *err = MACAROON_OUT_OF_MEMORY;
         return -1;
@@ -1018,7 +1019,7 @@ encode(enum encoding encoding,
     {
     case ENCODING_BASE64:
         enc_sz = b64_ntop(val, val_sz, enc, enc_sz + 1);
-        if ((int)enc_sz < 0)
+        if (enc_sz < 0)
         {
             *err = MACAROON_BUF_TOO_SMALL;
             return -1;
@@ -1027,14 +1028,17 @@ encode(enum encoding encoding,
     case ENCODING_HEX:
         macaroon_bin2hex(val, val_sz, enc);
         break;
+    case ENCODING_RAW: /* should never get here */
     default:
         assert(0);
     }
-    *result = enc;
+    *result = (const unsigned char*)enc;
     *result_sz = enc_sz;
     return 0;
 }
 
+/* not currently used, so commented out; will be added when decode is needed */
+#if 0
 /*
  * decode decodes the given string, putting
  * the resulting data and size into result and result_sz.
@@ -1095,6 +1099,7 @@ decode(enum encoding encoding,
     }
     return 0;
 }
+#endif
 
 static size_t
 macaroon_inner_size_hint(const struct macaroon* M)
@@ -1498,7 +1503,7 @@ macaroon_deserialize_json(const char* data, size_t data_sz,
     {
         cav = json_object_array_get_idx(arr, idx);
         
-        // TODO deserialize caveat vid and location.
+        /* TODO deserialize caveat vid and location. */
         if (!cav || !json_object_is_type(cav, json_type_object))
         {
             free(M);
@@ -1536,6 +1541,7 @@ macaroon_deserialize_json(const char* data, size_t data_sz,
 MACAROON_API size_t
 macaroon_serialize_json_size_hint(const struct macaroon* M)
 {
+    (void) M;
     return 1;
 }
 
@@ -1544,6 +1550,9 @@ macaroon_serialize_json(const struct macaroon* M,
                         char* data, size_t data_sz,
                         enum macaroon_returncode* err)
 {
+    (void) M;
+    (void) data;
+    (void) data_sz;
     *err = MACAROON_NO_JSON_SUPPORT;
     return -1;
 }
@@ -1742,13 +1751,13 @@ inspect_packet(const struct packet* from,
                char* ptr, char* ptr_end,
                enum macaroon_returncode *err)
 {
-    const unsigned char* key;
-    const unsigned char* val;
-    const unsigned char* enc_val;
-    size_t key_sz;
-    size_t val_sz;
-    size_t enc_sz;
-    size_t total_sz;
+    const unsigned char* key = NULL;
+    const unsigned char* val = NULL;
+    const unsigned char* enc_val = NULL;
+    size_t key_sz = 0;
+    size_t val_sz = 0;
+    size_t enc_sz = 0;
+    size_t total_sz = 0;
     int rc;
     rc = parse_kv_packet(from, &key, &key_sz, &val, &val_sz);
     assert(rc == 0);
@@ -1757,7 +1766,8 @@ inspect_packet(const struct packet* from,
         return NULL;
     }
     total_sz = key_sz + 1 + enc_sz + 1;
-    assert(total_sz <= ptr_end - ptr);
+    assert(ptr_end >= ptr);
+    assert(total_sz <= (size_t)(ptr_end - ptr));
 
     memmove(ptr, key, key_sz);
     ptr[key_sz] = ' ';
@@ -1776,9 +1786,8 @@ macaroon_inspect(const struct macaroon* M,
                  char* data, size_t data_sz,
                  enum macaroon_returncode* err)
 {
-    const unsigned char* key = NULL;
     const size_t sz = macaroon_inspect_size_hint(M);
-    size_t i;
+    size_t i = 0;
     char* ptr = data;
     char* ptr_end = data + data_sz;
 
@@ -1834,7 +1843,7 @@ macaroon_inspect(const struct macaroon* M,
     {
         return -1;
     }
-    // Replace final newline with terminator.
+    /* Replace final newline with terminator. */
     ptr[-1] = '\0';
     return 0;
 }
