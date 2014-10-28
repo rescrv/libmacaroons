@@ -30,7 +30,7 @@ AM_CPPFLAGS = $(SODIUM_CFLAGS)
 AM_CFLAGS   = -fvisibility=hidden $(SODIUM_CFLAGS) $(WANAL_CFLAGS)
 AM_CXXFLAGS = -fvisibility=hidden -fvisibility-inlines-hidden $(SODIUM_CFLAGS) $(WANAL_CXXFLAGS)
 
-AM_DISTCHECK_CONFIGURE_FLAGS = --enable-python-bindings --enable-json-support
+AM_DISTCHECK_CONFIGURE_FLAGS = --enable-python-bindings
 TESTS_ENVIRONMENT = . $(abs_top_srcdir)/test/env.sh "${abs_top_srcdir}" "${abs_top_builddir}" "${VERSION}";
 
 pyx_verbose = $(pyx_verbose_$(V))
