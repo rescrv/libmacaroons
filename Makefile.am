@@ -26,9 +26,9 @@
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 AM_MAKEFLAGS = --no-print-directory
-AM_CPPFLAGS =
-AM_CFLAGS   = -fvisibility=hidden $(WANAL_CFLAGS)
-AM_CXXFLAGS = -fvisibility=hidden -fvisibility-inlines-hidden $(WANAL_CXXFLAGS)
+AM_CPPFLAGS = $(SODIUM_CFLAGS)
+AM_CFLAGS   = -fvisibility=hidden $(SODIUM_CFLAGS) $(WANAL_CFLAGS)
+AM_CXXFLAGS = -fvisibility=hidden -fvisibility-inlines-hidden $(SODIUM_CFLAGS) $(WANAL_CXXFLAGS)
 
 AM_DISTCHECK_CONFIGURE_FLAGS = --enable-python-bindings --enable-json-support
 TESTS_ENVIRONMENT = . $(abs_top_srcdir)/test/env.sh "${abs_top_srcdir}" "${abs_top_builddir}" "${VERSION}";
