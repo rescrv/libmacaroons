@@ -793,6 +793,10 @@ macaroon_verify_inner_3rd(const struct macaroon_verifier* V,
                                       MACAROON_HASH_BYTES,
                                       MS, MS_sz, err, tree, tree_idx + 1);
     }
+    else
+    {
+        fail = -1;
+    }
 
     return fail;
 }
