@@ -275,8 +275,9 @@ b64_pton(src, target, targsize)
 	}
 
 	if (target && tarindex < targsize &&
-	    target[tarindex] != 0)
+	    target[tarindex] != 0 && state != 0) {
 		return (-1);
+	}
 
 	return (tarindex);
 }
