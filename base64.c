@@ -55,7 +55,7 @@
 #include "base64.h"
 
 static const char Base64[] =
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 static const char Pad64 = '=';
 
 /* (From RFC1521 and draft-ietf-dnssec-secext-03.txt)
@@ -167,11 +167,8 @@ b64_ntop(src, srclength, target, targsize)
 			return (-1);
 		target[datalength++] = Base64[output[0]];
 		target[datalength++] = Base64[output[1]];
-		if (srclength == 1)
-			target[datalength++] = Pad64;
-		else
+        if (srclength != 1)
 			target[datalength++] = Base64[output[2]];
-		target[datalength++] = Pad64;
 	}
 	if (datalength >= targsize)
 		return (-1);
@@ -205,6 +202,12 @@ b64_pton(src, target, targsize)
 
 		if (ch == Pad64)
 			break;
+
+		if (ch == '+')
+			ch = '-';
+
+		if (ch == '/')
+			ch = '_';
 
 		pos = strchr(Base64, ch);
 		if (pos == 0) 		/* A non-base64 character. */
@@ -261,59 +264,19 @@ b64_pton(src, target, targsize)
 		}
 	}
 
-	/*
-	 * We are done decoding Base-64 chars.  Let's see if we ended
-	 * on a byte boundary, and/or with erroneous trailing characters.
-	 */
-
-	if (ch == Pad64) {			/* We got a pad char. */
-		ch = (unsigned char)*src++;	/* Skip it, get next. */
-		switch (state) {
-		case 0:		/* Invalid = in first position */
-		case 1:		/* Invalid = in second position */
-			return (-1);
-
-		case 2:		/* Valid, means one byte of info */
-			/* Skip any number of spaces. */
-			for (; ch != '\0'; ch = (unsigned char)*src++)
-				if (!isspace(ch))
-					break;
-			/* Make sure there is another trailing = sign. */
-			if (ch != Pad64)
+	/* Skip padding and whitespace */
+	if (ch == Pad64) {
+		while (*src != '\0') {
+			if (!isspace(*src) && *src != Pad64) {
 				return (-1);
-			ch = (unsigned char)*src++;		/* Skip the = */
-			/* Fall through to "single trailing =" case. */
-			/* FALLTHROUGH */
-
-		case 3:		/* Valid, means two bytes of info */
-			/*
-			 * We know this char is an =.  Is there anything but
-			 * whitespace after it?
-			 */
-			for (; ch != '\0'; ch = (unsigned char)*src++)
-				if (!isspace(ch))
-					return (-1);
-
-			/*
-			 * Now make sure for cases 2 and 3 that the "extra"
-			 * bits that slopped past the last full byte were
-			 * zeros.  If we don't check them, they become a
-			 * subliminal channel.
-			 */
-			if (target && tarindex < targsize &&
-			    target[tarindex] != 0)
-				return (-1);
-        default:
-            break;
+			}
+			++src;
 		}
-	} else {
-		/*
-		 * We ended by seeing the end of the string.  Make sure we
-		 * have no partial bytes lying around.
-		 */
-		if (state != 0)
-			return (-1);
 	}
+
+	if (target && tarindex < targsize &&
+	    target[tarindex] != 0)
+		return (-1);
 
 	return (tarindex);
 }
