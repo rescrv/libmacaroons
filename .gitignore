@@ -9,6 +9,7 @@
 /aclocal.m4
 /autom4te.cache
 /bindings/python/macaroons.c
+/compile
 /config.guess
 /config.h
 /config.h.in
