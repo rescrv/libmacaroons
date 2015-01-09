@@ -151,7 +151,7 @@ is pure-ASCII, and is safe for inclusion in secure email, a standard HTTPS
 cookie, or a URL.   We can get the serialized form with:
 
     >>> M.serialize()
-    'MDAxY2xvY2F0aW9uIGh0dHA6Ly9teWJhbmsvCjAwMjZpZGVudGlmaWVyIHdlIHVzZWQgb3VyIHNlY3JldCBrZXkKMDAyZnNpZ25hdHVyZSDj2eApCFJsTAA5rhURQRXZf91ovyujebNCqvD2F9BVLwo'
+    'MDAxY2xvY2F0aW9uIGh0dHA6Ly9teWJhbmsvCjAwMjZpZGVudGlmaWVyIHdlIHVzZWQgb3VyIHNlY3JldCBrZXkKMDAyZnNpZ25hdHVyZSDj2eApCFJsTAA5rhURQRXZf91ovyujebNCqvD2F9BVLwo='
 
 Of course, this serialized form can be displayed in a more human-readable form
 for easy debugging:
@@ -401,7 +401,7 @@ The verifier we've built will reject all of these scenarios:
     Unauthorized: macaroon not authorized
 
     >>> # Incompetent hackers trying to change the signature
-    >>> N = macaroons.deserialize('MDAxY2xvY2F0aW9uIGh0dHA6Ly9teWJhbmsvCjAwMjZpZGVudGlmaWVyIHdlIHVzZWQgb3VyIHNl\nY3JldCBrZXkKMDAxZGNpZCBhY2NvdW50ID0gMzczNTkyODU1OQowMDIwY2lkIHRpbWUgPCAyMDE1\nLTAxLTAxVDAwOjAwCjAwMjJjaWQgZW1haWwgPSBhbGljZUBleGFtcGxlLm9yZwowMDJmc2lnbmF0\ndXJlID8f19FL+bkC9p/aoMmIecC7GxdOcLVyUnrv6lJMM7NSCg==')
+    >>> N = macaroons.deserialize('MDAxY2xvY2F0aW9uIGh0dHA6Ly9teWJhbmsvCjAwMjZpZGVudGlmaWVyIHdlIHVzZWQgb3VyIHNlY3JldCBrZXkKMDAxZGNpZCBhY2NvdW50ID0gMzczNTkyODU1OQowMDIwY2lkIHRpbWUgPCAyMDE1LTAxLTAxVDAwOjAwCjAwMjJjaWQgZW1haWwgPSBhbGljZUBleGFtcGxlLm9yZwowMDJmc2lnbmF0dXJlID8f19FL+bkC9p/aoMmIecC7GxdOcLVyUnrv6lJMM7NSCg==')
     >>> print N.inspect()
     location http://mybank/
     identifier we used our secret key
@@ -444,7 +444,7 @@ limited to Alice's bank account.
     location http://mybank/
     identifier we used our other secret key
     cid account = 3735928559
-    signature 1434e674ad84fdfdc9bc1aa00785325c8b6d57341fc7ce200ba4680c80786dda
+    signature 1efe4763f290dbce0c1d08477367e11f4eee456a64933cf662d79772dbb82128
 
 So far, so good.  Now let's add a third party caveat to this macaroon that
 requires that Alice authenticate with ``http://auth.mybank/'' before being
