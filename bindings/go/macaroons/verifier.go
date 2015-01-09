@@ -34,8 +34,6 @@ package macaroons
 #include <stdlib.h>
 #include "macaroons.h"
 #include "wrapper.h"
-
-
 */
 import "C"
 
@@ -47,7 +45,7 @@ import (
 
 type Verifier struct {
 	v         *C.struct_macaroon_verifier
-	callbacks []GeneralCaveat
+	callbacks []*GeneralCaveat
 }
 
 func NewVerifier() *Verifier {
@@ -81,8 +79,10 @@ func goGeneralCheck(f unsafe.Pointer, pred *C.uchar, predSz C.size_t) C.int {
 
 func (v *Verifier) SatisfyGeneral(caveat GeneralCaveat) error {
 	var err C.enum_macaroon_returncode
-	v.callbacks = append(v.callbacks, caveat)
-	rc := C.macaroon_verifier_satisfy_general(v.v, (*[0]byte)(C.cGeneralCheck) /*(*[0]byte)(unsafe.Pointer(&generalCheckFn))*/, unsafe.Pointer(&caveat), &err)
+	// Prevent the closure from garbage collection.
+	v.callbacks = append(v.callbacks, &caveat)
+
+	rc := C.addSatisfier(v.v, unsafe.Pointer(&caveat), &err)
 	if rc < 0 {
 		return macaroonError(err)
 	}

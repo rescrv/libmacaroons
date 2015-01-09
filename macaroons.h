@@ -190,6 +190,10 @@ macaroon_serialize_json(const struct macaroon* M,
                         enum macaroon_returncode* err);
 
 struct macaroon*
+macaroon_deserialize_json(const char* data, size_t data_sz,
+                          enum macaroon_returncode* err);
+
+struct macaroon*
 macaroon_deserialize(const char* data, enum macaroon_returncode* err);
 
 /* Human-readable representation *FOR DEBUGGING ONLY* */
