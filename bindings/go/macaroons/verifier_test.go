@@ -145,7 +145,6 @@ func (s *Suite) TestVerifyGeneral(c *gc.C) {
 		v := NewVerifier()
 		err = v.SatisfyGeneral(checkTimeAt("2014-05-08T23:40:00 +0000"))
 		c.Assert(err, gc.IsNil)
-
 		m2, err := m.Copy()
 		c.Assert(err, gc.IsNil)
 		err = m2.WithFirstPartyCaveat(deadline)

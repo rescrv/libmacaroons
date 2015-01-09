@@ -32,6 +32,7 @@
 
 /* C */
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
 
 /* json */
@@ -1041,70 +1042,6 @@ encode(enum encoding encoding,
     return 0;
 }
 
-/* not currently used, so commented out; will be added when decode is needed */
-#if 0
-/*
- * decode decodes the given string, putting
- * the resulting data and size into result and result_sz.
- * On return, if *result != data, the caller is
- * responsible for freeing it.
- *
- * str is assumed to be null-terminated - str_sz
- * should not include the terminating zero.
- */
-static int
-decode(enum encoding encoding, 
-       const unsigned char* str, size_t str_sz,
-       const unsigned char** result, size_t* result_sz,
-       enum macaroon_returncode* err)
-{
-    unsigned char* dec_val;
-    size_t dec_sz;
-
-    switch (encoding)
-    {
-    case ENCODING_RAW:
-        *result = str;
-        *result_sz = str_sz;
-
-    case ENCODING_BASE64:
-        dec_val = malloc(str_sz);
-        if (!dec_val)
-        {
-            *err = MACAROON_OUT_OF_MEMORY;
-            return -1;
-        }
-  
-        dec_sz = b64_pton(str, dec_val, str_sz);
-        if (dec_sz <= 0)
-        {
-            *err = MACAROON_INVALID;
-            free(dec_val);
-            return -1;
-        }
-        
-    case ENCODING_HEX:
-        dec_sz = str_sz / 2;
-        dec_val = malloc(dec_sz + 1);
-        if (!dec_val)
-        {
-            *err = MACAROON_OUT_OF_MEMORY;
-            return -1;
-        }
-        if (macaroon_hex2bin(str, str_sz, dec_val) < 0)
-        {
-            *err = MACAROON_INVALID;
-            free(dec_val);
-            return -1;
-        }
-
-    default:
-        assert(0);
-    }
-    return 0;
-}
-#endif
-
 static size_t
 macaroon_inner_size_hint(const struct macaroon* M)
 {
@@ -1368,6 +1305,67 @@ macaroon_serialize_json(const struct macaroon* M,
     }
 
     json_object_put(obj);
+    return 0;
+}
+
+/*
+ * decode decodes the given string, putting
+ * the resulting data and size into result and result_sz.
+ * On return, if *result != data, the caller is
+ * responsible for freeing it.
+ *
+ * str is assumed to be null-terminated - str_sz
+ * should not include the terminating zero.
+ */
+static int
+decode(enum encoding encoding, 
+       const unsigned char* str, size_t str_sz,
+       const unsigned char** result, size_t* result_sz,
+       enum macaroon_returncode* err)
+{
+    unsigned char* dec_val;
+    size_t dec_sz;
+
+    switch (encoding)
+    {
+    case ENCODING_RAW:
+        *result = str;
+        *result_sz = str_sz;
+
+    case ENCODING_BASE64:
+        dec_val = malloc(str_sz);
+        if (!dec_val)
+        {
+            *err = MACAROON_OUT_OF_MEMORY;
+            return -1;
+        }
+  
+        dec_sz = b64_pton(str, dec_val, str_sz);
+        if (dec_sz <= 0)
+        {
+            *err = MACAROON_INVALID;
+            free(dec_val);
+            return -1;
+        }
+        
+    case ENCODING_HEX:
+        dec_sz = str_sz / 2;
+        dec_val = malloc(dec_sz + 1);
+        if (!dec_val)
+        {
+            *err = MACAROON_OUT_OF_MEMORY;
+            return -1;
+        }
+        if (macaroon_hex2bin(str, str_sz, dec_val) < 0)
+        {
+            *err = MACAROON_INVALID;
+            free(dec_val);
+            return -1;
+        }
+
+    default:
+        assert(0);
+    }
     return 0;
 }
 

@@ -29,7 +29,9 @@
 #define _WRAPPER_H_
 
 #include <stdio.h>
+#include <stdlib.h>
+#include "macaroons.h"
 
-int cGeneralCheck(void *f, unsigned char* pred, size_t pred_sz);
+extern int addSatisfier(struct macaroon_verifier *v, void *arg, enum macaroon_returncode *err);
 
 #endif
