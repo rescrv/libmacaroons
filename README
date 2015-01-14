@@ -187,19 +187,19 @@ macaroon:
 Of course, we can add a few more caveats, and the macaroon's signature will
 change with each of them.
 
-    >>> M = M.add_first_party_caveat('time < 2015-01-01T00:00')
+    >>> M = M.add_first_party_caveat('time < 2020-01-01T00:00')
     >>> M.signature
-    '696665d0229f9f801b588bb3f68bbdb806b26d1fbcd40ca22d9017bce4a075f1'
+    'b5f06c8c8ef92f6c82c6ff282cd1f8bd1849301d09a2db634ba182536a611c49'
     >>> M = M.add_first_party_caveat('email = alice@example.org')
     >>> M.signature
-    '882e6d59496ed5245edb7ab5b8839ecd63e5d504e54839804f164070d8eed952'
+    'ddf553e46083e55b8d71ab822be3d8fcf21d6bf19c40d617bb9fb438934474b6'
     >>> print M.inspect()
     location http://mybank/
     identifier we used our secret key
     cid account = 3735928559
-    cid time < 2015-01-01T00:00
+    cid time < 2020-01-01T00:00
     cid email = alice@example.org
-    signature 882e6d59496ed5245edb7ab5b8839ecd63e5d504e54839804f164070d8eed952
+    signature ddf553e46083e55b8d71ab822be3d8fcf21d6bf19c40d617bb9fb438934474b6
 
 The combination of all caveats in this macaroon authorize alice@example.org to
 access account 3735928559 until the end of 2014.  Alice may present this
@@ -237,9 +237,9 @@ form we can work with.
     location http://mybank/
     identifier we used our secret key
     cid account = 3735928559
-    cid time < 2015-01-01T00:00
+    cid time < 2020-01-01T00:00
     cid email = alice@example.org
-    signature 882e6d59496ed5245edb7ab5b8839ecd63e5d504e54839804f164070d8eed952
+    signature ddf553e46083e55b8d71ab822be3d8fcf21d6bf19c40d617bb9fb438934474b6
 
 We have the same macaroon that Alice believes authorizes her to access her own
 account, but we must verify this for ourselves.  One (very flawed) way we could
@@ -313,7 +313,7 @@ self-attenuate her macaroons to be only usable from her IP address and browser:
 Although it's always possible to satisfy a caveat within a macaroon by providing
 it directly to the verifier, doing so can be quite tedious.  Consider the caveat
 on access time embedded within Alice's macaroon.  While an authorization routine
-could provide the exact caveat ``time < 2015-01-01T00:00'', doing so would
+could provide the exact caveat ``time < 2020-01-01T00:00'', doing so would
 require inspecting the macaroon before building the verifier.  Just like using
 MD5 to hash passwords, inspecting a macaroon's structure to build a verifier for
 it is considered to be very bad practice, and should be violently demonized in
@@ -351,7 +351,7 @@ This callback processes all caveats that begin with ``time < '', and returns
 True if the specified time has not yet passed.  We can see that our caveat does
 indeed return True when the caveat holds, and False otherwise:
 
-    >>> check_time('time < 2015-01-01T00:00')
+    >>> check_time('time < 2020-01-01T00:00')
     True
     >>> check_time('time < 2014-01-01T00:00')
     False
@@ -401,12 +401,12 @@ The verifier we've built will reject all of these scenarios:
     Unauthorized: macaroon not authorized
 
     >>> # Incompetent hackers trying to change the signature
-    >>> N = macaroons.deserialize('MDAxY2xvY2F0aW9uIGh0dHA6Ly9teWJhbmsvCjAwMjZpZGVudGlmaWVyIHdlIHVzZWQgb3VyIHNl\nY3JldCBrZXkKMDAxZGNpZCBhY2NvdW50ID0gMzczNTkyODU1OQowMDIwY2lkIHRpbWUgPCAyMDE1\nLTAxLTAxVDAwOjAwCjAwMjJjaWQgZW1haWwgPSBhbGljZUBleGFtcGxlLm9yZwowMDJmc2lnbmF0\ndXJlID8f19FL+bkC9p/aoMmIecC7GxdOcLVyUnrv6lJMM7NSCg==')
+    >>> N = macaroons.deserialize('MDAxY2xvY2F0aW9uIGh0dHA6Ly9teWJhbmsvCjAwMjZpZGVudGlmaWVyIHdlIHVzZWQgb3VyIHNl\nY3JldCBrZXkKMDAxZGNpZCBhY2NvdW50ID0gMzczNTkyODU1OQowMDIwY2lkIHRpbWUgPCAyMDIw\nLTAxLTAxVDAwOjAwCjAwMjJjaWQgZW1haWwgPSBhbGljZUBleGFtcGxlLm9yZwowMDJmc2lnbmF0\ndXJlID8f19FL+bkC9p/aoMmIecC7GxdOcLVyUnrv6lJMM7NSCg==\n')
     >>> print N.inspect()
     location http://mybank/
     identifier we used our secret key
     cid account = 3735928559
-    cid time < 2015-01-01T00:00
+    cid time < 2020-01-01T00:00
     cid email = alice@example.org
     signature 3f1fd7d14bf9b902f69fdaa0c98879c0bb1b174e70b572527aefea524c33b352
     >>> M.signature == N.signature
@@ -504,12 +504,12 @@ the secret used to create the third-party caveat.  The server can then generate
 and return a new macaroon that discharges the caveat:
 
     >>> D = macaroons.create('http://auth.mybank/', caveat_key, identifier)
-    >>> D = D.add_first_party_caveat('time < 2015-01-01T00:00')
+    >>> D = D.add_first_party_caveat('time < 2020-01-01T00:00')
     >>> print D.inspect()
     location http://auth.mybank/
     identifier this was how we remind auth of key/pred
-    cid time < 2015-01-01T00:00
-    signature 82a80681f9f32d419af12f6a71787a1bac3ab199df934ed950ddf20c25ac8c65
+    cid time < 2020-01-01T00:00
+    signature 2ed1049876e9d5840950274b579b0770317df54d338d9d3039c7c67d0d91d63c
 
 This new macaroon enables the verifier to determine that the third party caveat
 is satisfied.  Our target service added a time-limiting caveat to this macaroon
@@ -532,9 +532,9 @@ If we were to look at the signatures on these prepared discharge macaroons, we
 would see that the binding process has irreversibly altered their signature(s).
 
     >>> D.signature
-    '82a80681f9f32d419af12f6a71787a1bac3ab199df934ed950ddf20c25ac8c65'
+    '2ed1049876e9d5840950274b579b0770317df54d338d9d3039c7c67d0d91d63c'
     >>> DP.signature
-    '2eb01d0dd2b4475330739140188648cf25dda0425ea9f661f1574ca0a9eac54e'
+    'd115ef1c133b1126978d5ab27f69d99ba9d0468cd6c1b7e47b8c1c59019cb019'
 
 The root macaroon ``M'' and its discharge macaroons ``MS'' are ready for the
 request.  Alice can serialize them all and send them to the bank to prove she is
