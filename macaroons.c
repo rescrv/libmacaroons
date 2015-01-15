@@ -1222,7 +1222,7 @@ json_help_add_kv_packet(struct json_object* obj,
         return -1;
     }
 
-    rc = json_help_add_strings(obj, jkey, (const char*)val, val_sz, err);
+    rc = json_help_add_strings(obj, jkey, (const char*)enc_val, enc_sz, err);
     free(jkey);
     if (enc_val != val)
     {
@@ -1325,12 +1325,12 @@ decode(enum encoding encoding,
 {
     unsigned char* dec_val;
     size_t dec_sz;
-
     switch (encoding)
     {
     case ENCODING_RAW:
         *result = str;
         *result_sz = str_sz;
+        break;
 
     case ENCODING_BASE64:
         dec_val = malloc(str_sz);
@@ -1347,6 +1347,9 @@ decode(enum encoding encoding,
             free(dec_val);
             return -1;
         }
+        *result = dec_val;
+        *result_sz = dec_sz;
+        break;
         
     case ENCODING_HEX:
         dec_sz = str_sz / 2;
@@ -1362,6 +1365,9 @@ decode(enum encoding encoding,
             free(dec_val);
             return -1;
         }
+        *result = dec_val;
+        *result_sz = dec_sz;
+        break;
 
     default:
         assert(0);
@@ -1383,7 +1389,6 @@ json_help_copy_kv_packet(struct json_object* obj,
     const unsigned char* dec = NULL;
     size_t dec_sz;
     size_t str_sz = 0;
-
     if (!json_object_is_type(obj, json_type_object))
     {
         *err = MACAROON_INVALID;
@@ -1514,7 +1519,7 @@ macaroon_deserialize_json(const char* data, size_t data_sz,
             *err = MACAROON_INVALID;
             return NULL;
         }
-           
+          
         if (json_help_copy_kv_packet(cav, CID, create_cid_packet, &M->caveats[idx].cid, ENCODING_RAW, &ptr, err) < 0)
         {
             free(M);
