@@ -77,14 +77,21 @@ alongside your macaroons and read on!
 Installing Macaroons
 --------------------
 
-This library makes it easy to get started with using macaroons in your service.
-To use the library you must first install it.  You'll need to somehow install
-libsodium[2].  It's packaged in some Linux distributions, and can be installed
-from source on most *NIX platforms.  Once you have libsodium installed,
+This library makes it easy to get started with using macaroons in your
+service.  To use the library you must first install it.  You'll need
+to somehow install libsodium[2].  It's packaged in some Linux
+distributions, and can be installed from source on most *NIX
+platforms.  You'll also need to install libtool, cython, and,
+optionally libjson0-dev.  Once you have these libraries installed,
 installing macaroons is straight forward:
 
     $ autoreconf -i # only when installing from Git
+    $ ./configure --enable-python-bindings --enable-json-support
+
+    Or if you don't want JSON support,
+
     $ ./configure --enable-python-bindings
+
     $ make
     # make install
 
