@@ -38,6 +38,7 @@
 #include <sodium/crypto_auth_hmacsha256.h>
 #include <sodium/crypto_secretbox_xsalsa20poly1305.h>
 #include <sodium/utils.h>
+#include <sodium/randombytes.h>
 
 /* macaroons */
 #include "port.h"
@@ -81,6 +82,12 @@ int
 macaroon_memcmp(const void* data1, const void* data2, size_t data_sz)
 {
     return sodium_memcmp(data1, data2, data_sz);
+}
+
+int
+macaroon_randombytes(void* data, const size_t data_sz) {
+    randombytes_buf(data, data_sz);
+    return 0;
 }
 
 int

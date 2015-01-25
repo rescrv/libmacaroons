@@ -53,6 +53,9 @@ int
 macaroon_memcmp(const void* data1, const void* data2, size_t data_sz);
 
 int
+macaroon_randombytes(void* data, const size_t data_sz);
+
+int
 macaroon_hmac(const unsigned char* key, size_t key_sz,
               const unsigned char* text, size_t text_sz,
               unsigned char* hash);
