@@ -375,7 +375,7 @@ macaroon_add_third_party_caveat_raw(const struct macaroon* N,
         return NULL;
     }
 
-    macaroon_memzero(enc_nonce, sizeof(enc_nonce)); /* XXX get some random bytes instead */
+    macaroon_randombytes(enc_nonce, sizeof(enc_nonce));
     macaroon_memzero(enc_plaintext, sizeof(enc_plaintext));
     macaroon_memzero(enc_ciphertext, sizeof(enc_ciphertext));
 
