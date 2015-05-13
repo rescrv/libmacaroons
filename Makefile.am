@@ -66,7 +66,7 @@ EXTRA_DIST += test/readme.sh
 
 TESTS  =
 TESTS += test/python-hmac-sanity-check.sh
-TESTS += test/readme.sh
+#TESTS += test/readme.sh
 
 #################################### Python ####################################
 
