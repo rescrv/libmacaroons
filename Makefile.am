@@ -53,6 +53,7 @@ libmacaroons_la_LIBADD += $(SODIUM_LIBS)
 if ENABLE_JSON_SUPPORT
 libmacaroons_la_LIBADD += $(JSON_LIBS)
 endif
+libmacaroons_la_LDFLAGS = -version-info 0:1:0
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libmacaroons.pc
