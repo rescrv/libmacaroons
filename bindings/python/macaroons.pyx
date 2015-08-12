@@ -301,6 +301,8 @@ cdef class Verifier:
         cdef macaroon_returncode err
         cdef macaroon** discharges = NULL
         cdef Macaroon tmp
+        if M is None:
+            return False
         try:
             M.assert_not_null()
             MS = MS or []

@@ -90,6 +90,6 @@ bindings_python_macaroons_la_CFLAGS += $(CFLAGS)
 bindings_python_macaroons_la_LIBADD =
 bindings_python_macaroons_la_LIBADD += libmacaroons.la
 bindings_python_macaroons_la_LIBADD += $(PYTHON_LDFLAGS)
-bindings_python_macaroons_la_LDFLAGS = -module -avoid-version -export-symbols-regex initmacaroons $(AM_LDFLAGS) $(LDFLAGS)
+bindings_python_macaroons_la_LDFLAGS = -module -avoid-version -export-symbols-regex $(PYTHON_SYMBOL)macaroons $(AM_LDFLAGS) $(LDFLAGS)
 bindings/python/macaroons.c: bindings/python/macaroons.pyx
 	$(pyx_verbose)cython bindings/python/macaroons.pyx

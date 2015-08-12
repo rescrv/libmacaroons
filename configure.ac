@@ -40,6 +40,8 @@ AC_ARG_ENABLE([python_bindings], [AS_HELP_STRING([--enable-python-bindings],
               [python_bindings=${enableval}], [python_bindings=no])
 if test x"${python_bindings}" = xyes; then
     AC_PYTHON_DEVEL([>= '2.6'])
+    AS_CASE([$PYTHON_VERSION], [3*], [pythonsym=PyInit_], [2*], [pythonsym=init], [])
+    AC_SUBST([PYTHON_SYMBOL], [${pythonsym}])
 fi
 
 AC_ARG_ENABLE([json_support], [AS_HELP_STRING([--enable-json-support],
