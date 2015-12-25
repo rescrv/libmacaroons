@@ -1,0 +1,29 @@
+This file describes the informally standardized predicates recognized by the
+libmacaroons library.  It includes individual caveats, whose format looks like
+HTTP or mail headers whose purpose must not be overridden; and, header prefixes,
+which provide a space for caveat frameworks to develop and experiment without
+collision.
+
+If you're looking to develop your own macaroons framework, and wish to alert
+others to your chosen namespace, submit a pull request with your namespace
+included.  This will informally serve to track all independent macaroon caveat
+frameworks so that users can cooperate to avoid collision.
+
+Headers
+=======
+
+expires
+-------
+
+The expires header dictates the UTC time after which a macaroon will no longer
+be considered valid.  In the strftime terminology, the expires header looks like
+this:
+
+    expires: %Y-%m-%dT%H:%M:%SZ
+
+Namespaces
+==========
+
+gitswitch-*:
+    contact:  Robert Escriva <robert@rescrv.net>
+    purpose:  GitSwitch demo at https://github.com/rescrv/gitswitch
