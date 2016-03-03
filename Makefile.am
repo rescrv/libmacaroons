@@ -1,4 +1,4 @@
-# Copyright (c) 2014, Robert Escriva
+# Copyright (c) 2014-2016, Robert Escriva
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -65,9 +65,15 @@ EXTRA_DIST += test/python-hmac-sanity-check
 EXTRA_DIST += test/python-hmac-sanity-check.sh
 EXTRA_DIST += test/readme.sh
 
+check_LTLIBRARIES = libmacaroons-shim.la
+
+libmacaroons_shim_la_SOURCES = shim.c
+libmacaroons_shim_la_LIBADD =  $(SODIUM_LIBS)
+libmacaroons_shim_la_LDFLAGS = -module -avoid-version -rpath /evil/libtool/hack/to/force/shared/lib/creation
+
 TESTS  =
 TESTS += test/python-hmac-sanity-check.sh
-#TESTS += test/readme.sh
+TESTS += test/readme.sh
 
 #################################### Python ####################################
 
