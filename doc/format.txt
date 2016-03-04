@@ -1,0 +1,84 @@
+Current Format
+--------------
+
+Left empty so the proposed schemes can be discussed.  Shortcomings discussed
+here: https://docs.google.com/document/d/1On_ILeQFVFXaN8ZSitZ9UarZCB-t_cRInSmJ-HVofCU/edit
+
+Binary Format
+-------------
+
+macaroon : version location identifier caveats eos signature
+
+version : varint64=<version>
+
+location :
+         | location-id varint64=<len L> <L>
+
+identifier : macaroon-id varint64=<len id> <id>
+
+caveats : caveat
+        | caveat eos caveats
+
+caveat : location cid-id varint64=<len cid> <cid>
+       | location cid-id varint64=<len cid> <cid> vid-id varint64=<len vid> <vid>
+
+signature : signature-id <signature 32 bytes>
+
+eos : "\x00"
+
+location-id : "\x01"
+
+macaroon-id : "\x02"
+
+cid-id : "\x04"
+
+vid-id : "\x06"
+
+signature-id : "\x08"
+
+JSON Format
+-----------
+
+The JSON format should be a mechanical translation of the above format with the
+following specs:
+
+macaroon: a JSON object with the fields:  "v" for version, "l" for location
+          (optional), "i" for identifier, "c" for caveats, and "s" for
+          signature.
+
+version: a JSON integer
+
+location: a string
+
+identifier: a string
+
+caveats: a JSON list of caveats
+
+caveat: a JSON object with the fields:  "c" for CID (1st and 3rd), "v" for VID
+        (3rd only), "l" for location (optional).
+
+signature: a string
+
+Strings may contain unicode data so long as the encoding is consistent across
+the macaroon, and the ascii string r'\"' will unambiguously map to the
+unicode characters '\' and '"' without requiring the parser to understand the
+width of characters in the encoding.  Practically, ASCII and UTF-8 are safe;
+other encodings should be used with care.
+
+Strings should be unicode strings, and the verifier should be written to handle
+this.  All fields described use ascii properties.
+
+To handle binary data, such as the signature, one of the following two schemes
+must be used (a compliant implementation must handle both):
+
+Hex:  The field name should end in "H" and the value is hex-encoded.  For
+      example,
+                {"cH": "68656c6c6f20776f726c64"}
+      is equivalent to
+                {"c": "hello world"}
+
+Base64:  The field name should end in "64" and the value is url-safe base64
+         encoded.  For example,
+                {"c64": "aGVsbG8gd29ybGQ="}
+         is equivalent to
+                {"c": "hello world"}
