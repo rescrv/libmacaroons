@@ -33,11 +33,11 @@
 /* C */
 #include <stdlib.h>
 
-/* sodium */
-#include <sodium/utils.h>
+void
+explicit_bzero(void *buf, size_t len);
 
 __attribute__ ((visibility ("default")))
-void randombytes_buf(void * const buf, const size_t size)
+void arc4random_buf(void * const buf, const size_t size)
 {
-    sodium_memzero(buf, size);
+    explicit_bzero(buf, size);
 }

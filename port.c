@@ -34,18 +34,10 @@
 #include <assert.h>
 #include <string.h>
 
-/* sodium */
-#include <sodium/crypto_auth_hmacsha256.h>
-#include <sodium/crypto_secretbox_xsalsa20poly1305.h>
-#include <sodium/utils.h>
-#include <sodium/randombytes.h>
-
 /* macaroons */
 #include "port.h"
-
-#if crypto_auth_hmacsha256_BYTES != MACAROON_HASH_BYTES
-#error set your constants right
-#endif
+#include "sha256.h"
+#include "tweetnacl.h"
 
 #if crypto_secretbox_xsalsa20poly1305_KEYBYTES != MACAROON_SECRET_KEY_BYTES 
 #error set your constants right
@@ -73,20 +65,30 @@
  */
 
 void
+explicit_bzero(void *buf, size_t len);
+
+void
 macaroon_memzero(void* data, size_t data_sz)
 {
-    sodium_memzero(data, data_sz);
+    explicit_bzero(data, data_sz);
 }
+
+int
+timingsafe_bcmp(const void *b1, const void *b2, size_t n);
 
 int
 macaroon_memcmp(const void* data1, const void* data2, size_t data_sz)
 {
-    return sodium_memcmp(data1, data2, data_sz);
+    return timingsafe_bcmp(data1, data2, data_sz);
 }
 
+void
+arc4random_buf(void *buf, size_t len);
+
 int
-macaroon_randombytes(void* data, const size_t data_sz) {
-    randombytes_buf(data, data_sz);
+macaroon_randombytes(void* data, const size_t data_sz)
+{
+    arc4random_buf(data, data_sz);
     return 0;
 }
 
@@ -96,12 +98,10 @@ macaroon_hmac(const unsigned char* _key, size_t _key_sz,
               unsigned char* hash)
 {
     int rc;
-    unsigned char key[crypto_auth_hmacsha256_KEYBYTES];
-
-    sodium_memzero(key, crypto_auth_hmacsha256_BYTES);
+    unsigned char key[MACAROON_HASH_BYTES];
+    explicit_bzero(key, MACAROON_HASH_BYTES);
     memmove(key, _key, _key_sz < sizeof(key) ? _key_sz : sizeof(key));
-    rc = crypto_auth_hmacsha256(hash, text, text_sz, key);
-    assert(rc == 0);
+    HMAC_SHA256_Buf(key, MACAROON_HASH_BYTES, text, text_sz, hash);
     return 0;
 }
 
@@ -126,8 +126,15 @@ macaroon_secretbox_open(const unsigned char* enc_key,
 void
 macaroon_bin2hex(const unsigned char* bin, size_t bin_sz, char* hex)
 {
-    void* ptr = sodium_bin2hex(hex, bin_sz * 2 + 1, bin, bin_sz);
-    assert(ptr == hex);
+    const static char hexes[] = "0123456789abcdef";
+
+    for (size_t i = 0; i < bin_sz; ++i)
+    {
+        hex[2 * i + 0] = hexes[(bin[i] >> 4) & 0xfu];
+        hex[2 * i + 1] = hexes[bin[i] & 0xfU];
+    }
+
+    hex[2 * bin_sz] = '\0';
 }
 
 int

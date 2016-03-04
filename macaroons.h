@@ -181,18 +181,6 @@ macaroon_serialize(const struct macaroon* M,
                    char* data, size_t data_sz,
                    enum macaroon_returncode* err);
 
-size_t
-macaroon_serialize_json_size_hint(const struct macaroon* M);
-
-int
-macaroon_serialize_json(const struct macaroon* M,
-                        char* data, size_t data_sz,
-                        enum macaroon_returncode* err);
-
-struct macaroon*
-macaroon_deserialize_json(const char* data, size_t data_sz,
-                          enum macaroon_returncode* err);
-
 struct macaroon*
 macaroon_deserialize(const char* data, enum macaroon_returncode* err);
 

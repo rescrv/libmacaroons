@@ -67,8 +67,6 @@ cdef extern from "macaroons.h":
     void macaroon_signature(const macaroon* M, const unsigned char** signature, size_t* signature_sz)
     size_t macaroon_serialize_size_hint(macaroon* M)
     int macaroon_serialize(macaroon* M, char* data, size_t data_sz, macaroon_returncode* err)
-    size_t macaroon_serialize_json_size_hint(const macaroon* M)
-    int macaroon_serialize_json(const macaroon* M, char* data, size_t data_sz, macaroon_returncode* err)
     macaroon* macaroon_deserialize(char* data, macaroon_returncode* err)
     size_t macaroon_inspect_size_hint(macaroon* M)
     int macaroon_inspect(macaroon* M, char* data, size_t data_sz, macaroon_returncode* err)
@@ -163,23 +161,6 @@ cdef class Macaroon:
             if data == NULL:
                 raise MemoryError
             if macaroon_serialize(self._M, data, data_sz, &err) < 0:
-                raise_error(err)
-            return bytes(data)
-        finally:
-            if data != NULL:
-                free(data)
-
-    def serialize_json(self):
-        cdef char* data = NULL
-        cdef size_t data_sz = 0
-        cdef macaroon_returncode err
-        self.assert_not_null()
-        try:
-            data_sz = macaroon_serialize_json_size_hint(self._M)
-            data = <char*>malloc(sizeof(unsigned char) * data_sz)
-            if data == NULL:
-                raise MemoryError
-            if macaroon_serialize_json(self._M, data, data_sz, &err) < 0:
                 raise_error(err)
             return bytes(data)
         finally:

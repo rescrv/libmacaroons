@@ -26,9 +26,8 @@
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 AM_MAKEFLAGS = --no-print-directory
-AM_CPPFLAGS = $(SODIUM_CFLAGS)
-AM_CFLAGS   = -fvisibility=hidden $(SODIUM_CFLAGS) $(WANAL_CFLAGS)
-AM_CXXFLAGS = -fvisibility=hidden -fvisibility-inlines-hidden $(SODIUM_CFLAGS) $(WANAL_CXXFLAGS)
+AM_CFLAGS   = -fvisibility=hidden $(WANAL_CFLAGS)
+AM_CXXFLAGS = -fvisibility=hidden -fvisibility-inlines-hidden $(WANAL_CXXFLAGS)
 
 AM_DISTCHECK_CONFIGURE_FLAGS = --enable-python-bindings PYTHON=python2
 TESTS_ENVIRONMENT = . $(abs_top_srcdir)/test/env.sh "${abs_top_srcdir}" "${abs_top_builddir}" "${VERSION}";
@@ -47,12 +46,16 @@ noinst_HEADERS = base64.h constants.h custom-config.h packet.h port.h
 
 lib_LTLIBRARIES = libmacaroons.la
 
-libmacaroons_la_SOURCES = base64.c macaroons.c packet.c port.c
-libmacaroons_la_LIBADD  =
-libmacaroons_la_LIBADD += $(SODIUM_LIBS)
-if ENABLE_JSON_SUPPORT
-libmacaroons_la_LIBADD += $(JSON_LIBS)
-endif
+libmacaroons_la_SOURCES =
+libmacaroons_la_SOURCES += base64.c
+libmacaroons_la_SOURCES += macaroons.c
+libmacaroons_la_SOURCES += packet.c
+libmacaroons_la_SOURCES += port.c
+libmacaroons_la_SOURCES += explicit_bzero.c
+libmacaroons_la_SOURCES += timingsafe_bcmp.c
+libmacaroons_la_SOURCES += tweetnacl.c
+libmacaroons_la_SOURCES += sha256.c
+libmacaroons_la_LIBADD = ${BSDLIBS}
 libmacaroons_la_LDFLAGS = -version-info 0:1:0
 
 pkgconfigdir = $(libdir)/pkgconfig
@@ -67,8 +70,7 @@ EXTRA_DIST += test/readme.sh
 
 check_LTLIBRARIES = libmacaroons-shim.la
 
-libmacaroons_shim_la_SOURCES = shim.c
-libmacaroons_shim_la_LIBADD =  $(SODIUM_LIBS)
+libmacaroons_shim_la_SOURCES = shim.c explicit_bzero.c
 libmacaroons_shim_la_LDFLAGS = -module -avoid-version -rpath /evil/libtool/hack/to/force/shared/lib/creation
 
 TESTS  =

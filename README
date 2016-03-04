@@ -77,11 +77,11 @@ alongside your macaroons and read on!
 Installing Macaroons
 --------------------
 
-This library makes it easy to get started with using macaroons in your service.
-To use the library you must first install it.  You'll need to somehow install
-libsodium[2].  It's packaged in some Linux distributions, and can be installed
-from source on most *NIX platforms.  Once you have libsodium installed,
-installing macaroons is straight forward:
+This library makes it easy to get started with using macaroons in your
+service.  To use the library you must first install it.  You'll need to
+somehow install libbsd[2].  It's packaged in some Linux distributions, and can
+be installed from source on most *NIX platforms.  Once you have libbsd
+installed, installing macaroons is straight forward:
 
     $ autoreconf -i # only when installing from Git
     $ ./configure --enable-python-bindings
@@ -591,4 +591,4 @@ caveat's identifier.  This saves a round trip, and frees the third party from
 having to remember an association between identifiers and key/predicate pairs.
 
 [1] http://research.google.com/pubs/pub41892.html
-[2] https://github.com/jedisct1/libsodium
+[2] https://libbsd.freedesktop.org/wiki/
