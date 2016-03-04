@@ -24,7 +24,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 cdef extern from "stdlib.h":
 
     void* malloc(size_t size)
@@ -82,6 +81,15 @@ SUGGESTED_SECRET_LENGTH = 32
 
 class MacaroonError(Exception): pass
 class Unauthorized(Exception): pass
+
+
+cdef bytes tobytes(s):
+    if type(s) in (unicode, str):
+        return s.encode('utf8')
+    elif type(s) is bytes:
+        return s
+    else:
+        raise TypeError("a bytes/str-like object is required, not '%s'" % s.__class__.__name__)
 
 
 cdef raise_error(macaroon_returncode err):
@@ -225,8 +233,9 @@ cdef class Macaroon:
             raise_error(err)
         return DP
 
-    def add_first_party_caveat(self, bytes predicate):
+    def add_first_party_caveat(self, predicate):
         self.assert_not_null()
+        predicate = tobytes(predicate)
         cdef macarr
         cdef macaroon_returncode err
         cdef Macaroon M = Macaroon()
@@ -236,7 +245,10 @@ cdef class Macaroon:
             raise_error(err)
         return M
 
-    def add_third_party_caveat(self, bytes _location, bytes _key, bytes _key_id):
+    def add_third_party_caveat(self, _location, _key, _key_id):
+        _location = tobytes(_location)
+        _key = tobytes(_key)
+        _key_id = tobytes(_key_id)
         cdef unsigned char* location = _location
         cdef size_t location_sz = len(_location)
         cdef unsigned char* key = _key
@@ -291,13 +303,15 @@ cdef class Verifier:
             raise_error(err)
         self._funcs.append(func)
 
-    def verify(self, Macaroon M, bytes key, MS=None):
+    def verify(self, Macaroon M, key, MS=None):
+        key = tobytes(key)
         if self.verify_unsafe(M, key, MS):
             return True
         else:
             raise Unauthorized("macaroon not authorized")
 
-    def verify_unsafe(self, Macaroon M, bytes key, MS=None):
+    def verify_unsafe(self, Macaroon M, key, MS=None):
+        key = tobytes(key)
         cdef macaroon_returncode err
         cdef macaroon** discharges = NULL
         cdef Macaroon tmp
@@ -323,7 +337,10 @@ cdef class Verifier:
                 free(discharges)
 
 
-def create(bytes _location, bytes _key, bytes _key_id):
+def create(_location, _key, _key_id):
+    _location = tobytes(_location)
+    _key = tobytes(_key)
+    _key_id = tobytes(_key_id)
     cdef unsigned char* location = _location
     cdef size_t location_sz = len(_location)
     cdef unsigned char* key = _key
