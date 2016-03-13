@@ -7,34 +7,51 @@ here: https://docs.google.com/document/d/1On_ILeQFVFXaN8ZSitZ9UarZCB-t_cRInSmJ-H
 Binary Format
 -------------
 
-macaroon : version location identifier caveats eos signature
+Terminal tokens are in all-capitals, and all except for EOS and VERSION are
+byte sequences in the following format:
 
-version : varint64=<version>
+	<field type: varuint64> <field length: varuint64=N> <field content: N bytes>
 
-location :
-         | location-id varint64=<len L> <L>
+where varuint64 describes an unsigned integer in variable length
+encoding, as described here.
 
-identifier : macaroon-id varint64=<len id> <id>
+	https://developers.google.com/protocol-buffers/docs/encoding#varints
 
-caveats : caveat
-        | caveat eos caveats
+To paraphrase that description, a varuint64 number consists of a sequence of bytes:
 
-caveat : location cid-id varint64=<len cid> <cid>
-       | location cid-id varint64=<len cid> <cid> vid-id varint64=<len vid> <vid>
+	x1, x2, ..., xn
 
-signature : signature-id <signature 32 bytes>
+where x1... x(n-1) are in the range 0x80 to 0xff and xn is in the range
+0x0..0x7f. That is, all but the last byte has its most significant bit set.
+The encoded number is (x1 & 0x7f) | (x2 & 0x7f) << 7 | ... xn << (n * 7).
+That is, each byte encodes 7 bits of the resulting number,
+least-significant bits first.
 
-eos : "\x00"
+Field type values for the terminal tokens are as follows:
 
-location-id : "\x01"
+	LOCATION=1
+	IDENTIFIER=2
+	VID=4
+	SIGNATURE=6
 
-macaroon-id : "\x02"
+EOS is the single byte zero.
+VERSION is a single byte with some value as yet to be decided.
 
-cid-id : "\x04"
+The grammar is as follows, in YACC-like syntax:
 
-vid-id : "\x06"
+macaroon: VERSION opt_location IDENTIFIER EOS caveats EOS SIGNATURE
 
-signature-id : "\x08"
+caveats: caveat caveats
+        | EOS
+
+caveat: opt_location IDENTIFIER opt_vid EOS
+
+opt_vid:
+	| VID
+
+opt_location:
+         | LOCATION
+
 
 JSON Format
 -----------
