@@ -42,6 +42,8 @@
 #include <libutil.h>
 #elif HAVE_BSD_LIBUTIL_H
 #include <bsd/libutil.h>
+#elif HAVE_OSX_LIBUTIL_H
+#include <util.h>
 #else
 #error portability problem
 #endif
