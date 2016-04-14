@@ -230,8 +230,6 @@ func (m *Macaroon) Inspect() (string, error) {
 	sz := C.macaroon_inspect(m.m, data, n, &err)
 	if sz < 0 {
 		return "", macaroonError(err)
-	} else if sz < 0 {
-		return "", fmt.Errorf("serialization error")
 	}
 	buf = bytes.TrimRight(buf, nuls)
 	return string(buf), nil
