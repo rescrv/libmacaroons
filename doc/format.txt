@@ -35,7 +35,7 @@ Field type values for the terminal tokens are as follows:
 	SIGNATURE=6
 
 EOS is the single byte zero.
-VERSION is a single byte with some value as yet to be decided.
+VERSION is a single byte with the value 2.
 
 The grammar is as follows, in YACC-like syntax:
 
@@ -57,45 +57,71 @@ JSON Format
 -----------
 
 The JSON format should be a mechanical translation of the above format with the
-following specs:
+following specification.
 
-macaroon: a JSON object with the fields:  "v" for version, "l" for location
-          (optional), "i" for identifier, "c" for caveats, and "s" for
-          signature.
+All fields other than the version and location fields may contain arbitrary binary data, though
+per-service conventions are free to impose stricter requirements - these
+are outside the scope of this document.
 
-version: a JSON integer
+Locations and the version should contain Unicode strings, although as these
+are unverified data, implementations do not need to be
+strict about rejecting non-UTF-8 byte sequences when converting
+from the binary format - for example an implementation
+may choose to map unknown characters to 0xfffd values.
 
-location: a string
+The version field should contain a string holding a numeric version number.
+The initial version specified in this document is "2", indicating
+the major version.
 
-identifier: a string
+To handle binary data, other fields may be encoded as hexadecimal,
+base64 or UTF-8. If a field is named *x* below, it may be specified
+in hex with the name *x*H, or base64 with the name *x*64.
+The hex format should allow both upper and lower case digits;
+the base64 format should allow both URL-safe and standard
+base64 encodings with optional "=" pad characters. The UTF-8
+format can be used when the field contains a valid sequence of
+UTF-8 bytes that can be encoded without loss as a JSON
+string. In this case the JSON string should be interpreted as
+a sequence of UTF-8 bytes after decoding for the purposes
+of signature calculation.
 
-caveats: a JSON list of caveats
+Implementations should reject JSON objects containing more than
+one representation of the same field.
 
-caveat: a JSON object with the fields:  "c" for CID (1st and 3rd), "v" for VID
-        (3rd only), "l" for location (optional).
+For example, all the following objects encode a caveat with the
+same id:
 
-signature: a string
+	{"i": "Ou?T"}
+	{"iH": "4f753f54"}
+	{"iH": "4F753F54"}
+	{"iH": "4f753F54"}
+	{"i64": "T3U/VA=="}
+	{"i64": "T3U_VA=="}
+	{"i64": "T3U/VA"}
+	{"i64": "T3U_VA"}
 
-Strings may contain unicode data so long as the encoding is consistent across
-the macaroon, and the ascii string r'\"' will unambiguously map to the
-unicode characters '\' and '"' without requiring the parser to understand the
-width of characters in the encoding.  Practically, ASCII and UTF-8 are safe;
-other encodings should be used with care.
+The following object is an invalid caveat:
 
-Strings should be unicode strings, and the verifier should be written to handle
-this.  All fields described use ascii properties.
+	{"i": "foo", "iH": "666f6f"}
 
-To handle binary data, such as the signature, one of the following two schemes
-must be used (a compliant implementation must handle both):
+The JSON object fields as are follows.
 
-Hex:  The field name should end in "H" and the value is hex-encoded.  For
-      example,
-                {"cH": "68656c6c6f20776f726c64"}
-      is equivalent to
-                {"c": "hello world"}
+`v` (string): The version of the macaroon encoding used. Currently
+this should be the string "2".
 
-Base64:  The field name should end in "64" and the value is url-safe base64
-         encoded.  For example,
-                {"c64": "aGVsbG8gd29ybGQ="}
-         is equivalent to
-                {"c": "hello world"}
+`i` (data): The macaroon identifier
+
+`l` (optional string): The location of the macaroon.
+
+`c` (array): A JSON array an object for each caveat.
+
+`s` (data): The signature (must encode to exactly 32 bytes)
+
+Each caveat is an object holding the following fields:
+
+`i` (data): The caveat identifier.
+
+`l` (optional string): The location of a third party caveat.
+	This must not be present if the VID (`v` field) is present.
+
+`v` (data): The verification id (VID).
