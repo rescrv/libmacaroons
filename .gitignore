@@ -28,3 +28,4 @@
 /Makefile.in
 /missing
 /stamp-h1
+/test/varint

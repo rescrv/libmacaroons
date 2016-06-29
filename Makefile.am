@@ -51,6 +51,7 @@ libmacaroons_la_SOURCES += base64.c
 libmacaroons_la_SOURCES += macaroons.c
 libmacaroons_la_SOURCES += packet.c
 libmacaroons_la_SOURCES += port.c
+libmacaroons_la_SOURCES += varint.c
 libmacaroons_la_SOURCES += explicit_bzero.c
 libmacaroons_la_SOURCES += timingsafe_bcmp.c
 libmacaroons_la_SOURCES += tweetnacl.c
@@ -69,6 +70,7 @@ EXTRA_DIST += test/python-hmac-sanity-check.sh
 EXTRA_DIST += test/readme.sh
 
 check_LTLIBRARIES = libmacaroons-shim.la
+check_PROGRAMS = test/varint
 
 libmacaroons_shim_la_SOURCES = shim.c explicit_bzero.c
 libmacaroons_shim_la_LDFLAGS = -module -avoid-version -rpath /evil/libtool/hack/to/force/shared/lib/creation
@@ -78,6 +80,10 @@ if ENABLE_PYTHON_BINDINGS
 TESTS += test/python-hmac-sanity-check.sh
 TESTS += test/readme.sh
 endif
+TESTS += test/varint
+
+test_varint_SOURCES = test/varint.c varint.c
+test_varint_CFLAGS = $(AM_CFLAGS) $(CFLAGS)
 
 #################################### Python ####################################
 
