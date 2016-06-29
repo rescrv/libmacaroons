@@ -74,8 +74,10 @@ libmacaroons_shim_la_SOURCES = shim.c explicit_bzero.c
 libmacaroons_shim_la_LDFLAGS = -module -avoid-version -rpath /evil/libtool/hack/to/force/shared/lib/creation
 
 TESTS  =
+if ENABLE_PYTHON_BINDINGS
 TESTS += test/python-hmac-sanity-check.sh
 TESTS += test/readme.sh
+endif
 
 #################################### Python ####################################
 
