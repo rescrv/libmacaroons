@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, Robert Escriva
+/* Copyright (c) 2014-2016, Robert Escriva
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,34 +34,28 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#if HAVE_BSD_STDLIB_H
+#ifdef HAVE_BSD_STDLIB_H
 #include <bsd/stdlib.h>
 #endif
 #include <string.h>
-#if HAVE_LIBUTIL_H
+#ifdef HAVE_LIBUTIL_H
 #include <libutil.h>
-#elif HAVE_BSD_LIBUTIL_H
+#elif defined HAVE_BSD_LIBUTIL_H
 #include <bsd/libutil.h>
-#elif HAVE_OSX_LIBUTIL_H
+#elif defined HAVE_OSX_LIBUTIL_H
 #include <util.h>
 #else
 #error portability problem
 #endif
 
 /* macaroons */
-#include "base64.h"
+#include "macaroons.h"
 #include "constants.h"
 #include "macaroons.h"
-#include "packet.h"
+#include "macaroons-inner.h"
 #include "port.h"
-
-#ifdef PARANOID_MACAROONS
-#define VALIDATE(M) assert(macaroon_validate(M) == 0);
-#else
-#define VALIDATE(M) do {} while (0)
-#endif
-
-#define MACAROON_API __attribute__ ((visibility ("default")))
+#include "slice.h"
+#include "v1.h"
 
 #if MACAROON_HASH_BYTES != MACAROON_SECRET_KEY_BYTES
 #error bad constants
@@ -70,13 +64,6 @@
 #if MACAROON_HASH_BYTES != MACAROON_SUGGESTED_SECRET_LENGTH
 #error bad constants
 #endif
-
-struct caveat
-{
-    struct packet cid;
-    struct packet vid;
-    struct packet cl;
-};
 
 struct predicate
 {
@@ -91,19 +78,6 @@ struct verifier_callback
     void* ptr;
 };
 
-struct macaroon
-{
-    /* the location packet */
-    struct packet location;
-    /* the identifier packet */
-    struct packet identifier;
-    /* the signature packet */
-    struct packet signature;
-    /* zero or more caveats */
-    size_t num_caveats;
-    struct caveat caveats[1];
-};
-
 struct macaroon_verifier
 {
     struct predicate* predicates;
@@ -115,10 +89,10 @@ struct macaroon_verifier
 };
 
 /* Allocate a new macaroon with space for "num_caveats" caveats and a body of
- * "body_data" bytes.  Returns a ptr to a contiguous set of "body_data" bytes to
+ * "body_data" bytes.  Returns via _ptr a contiguous set of "body_data" bytes to
  * which the callee may write.
  */
-static struct macaroon*
+struct macaroon*
 macaroon_malloc(const size_t num_caveats,
                 const size_t body_data,
                 unsigned char** _ptr)
@@ -143,8 +117,8 @@ macaroon_malloc(const size_t num_caveats,
     return M;
 }
 
-/* cumulative packet size, excluding the signature packet */
-static size_t
+/* cumulative slice size, excluding the signature slice */
+size_t
 macaroon_body_size(const struct macaroon* M)
 {
     size_t i = 0;
@@ -181,9 +155,7 @@ macaroon_create_raw(const unsigned char* location, size_t location_sz,
         return NULL;
     }
 
-    sz = PACKET_SIZE(LOCATION, location_sz)
-       + PACKET_SIZE(IDENTIFIER, id_sz)
-       + PACKET_SIZE(SIGNATURE, MACAROON_HASH_BYTES);
+    sz = location_sz + id_sz + MACAROON_HASH_BYTES;
     M = macaroon_malloc(0, sz, &ptr);
 
     if (!M)
@@ -192,12 +164,14 @@ macaroon_create_raw(const unsigned char* location, size_t location_sz,
         return NULL;
     }
 
-    ptr = create_location_packet(location, location_sz, &M->location, ptr);
-    ptr = create_identifier_packet(id, id_sz, &M->identifier, ptr);
-    ptr = create_signature_packet(hash, MACAROON_HASH_BYTES, &M->signature, ptr);
+    ptr = copy_to_slice(location, location_sz, &M->location, ptr);
+    ptr = copy_to_slice(id, id_sz, &M->identifier, ptr);
+    ptr = copy_to_slice(hash, MACAROON_HASH_BYTES, &M->signature, ptr);
     VALIDATE(M);
     return M;
 }
+
+#define MACAROON_KEY_GENERATOR "macaroons-key-generator"
 
 static int
 generate_derived_key(const unsigned char* variable_key,
@@ -206,7 +180,8 @@ generate_derived_key(const unsigned char* variable_key,
 {
     unsigned char genkey[MACAROON_HASH_BYTES];
     macaroon_memzero(genkey, MACAROON_HASH_BYTES);
-    memmove(genkey, "macaroons-key-generator", sizeof("macaroons-key-generator"));
+    assert(sizeof(MACAROON_KEY_GENERATOR) <= sizeof(genkey));
+    memmove(genkey, MACAROON_KEY_GENERATOR, sizeof(MACAROON_KEY_GENERATOR));
     return macaroon_hmac(genkey, MACAROON_HASH_BYTES, variable_key, variable_key_sz, derived_key);
 }
 
@@ -258,14 +233,12 @@ macaroon_add_first_party_caveat(const struct macaroon* N,
                                 const unsigned char* predicate, size_t predicate_sz,
                                 enum macaroon_returncode* err)
 {
-    const unsigned char* key;
     unsigned char hash[MACAROON_HASH_BYTES];
     size_t i;
     size_t sz;
     struct macaroon* M;
     unsigned char* ptr;
     assert(predicate_sz < MACAROON_MAX_STRLEN);
-    assert(N->signature.data && N->signature.size > PACKET_PREFIX);
 
     if (N->num_caveats + 1 > MACAROON_MAX_CAVEATS)
     {
@@ -273,21 +246,19 @@ macaroon_add_first_party_caveat(const struct macaroon* N,
         return NULL;
     }
 
-    if (parse_signature_packet(&N->signature, &key) < 0)
+    if (!N->signature.data || N->signature.size != MACAROON_HASH_BYTES)
     {
         *err = MACAROON_INVALID;
         return NULL;
     }
 
-    if (macaroon_hash1(key, predicate, predicate_sz, hash) < 0)
+    if (macaroon_hash1(N->signature.data, predicate, predicate_sz, hash) < 0)
     {
         *err = MACAROON_HASH_FAILED;
         return NULL;
     }
 
-    sz  = macaroon_body_size(N);
-    sz += PACKET_SIZE(CID_SZ, predicate_sz);
-    sz += PACKET_SIZE(SIGNATURE, MACAROON_HASH_BYTES);
+    sz = macaroon_body_size(N) + predicate_sz + MACAROON_HASH_BYTES;
     M = macaroon_malloc(N->num_caveats + 1, sz, &ptr);
 
     if (!M)
@@ -297,19 +268,19 @@ macaroon_add_first_party_caveat(const struct macaroon* N,
     }
 
     M->num_caveats = N->num_caveats + 1;
-    ptr = copy_packet(&N->location, &M->location, ptr);
-    ptr = copy_packet(&N->identifier, &M->identifier, ptr);
+    ptr = copy_slice(&N->location, &M->location, ptr);
+    ptr = copy_slice(&N->identifier, &M->identifier, ptr);
 
     for (i = 0; i < N->num_caveats; ++i)
     {
-        ptr = copy_packet(&N->caveats[i].cid, &M->caveats[i].cid, ptr);
-        ptr = copy_packet(&N->caveats[i].vid, &M->caveats[i].vid, ptr);
-        ptr = copy_packet(&N->caveats[i].cl,  &M->caveats[i].cl,  ptr);
+        ptr = copy_slice(&N->caveats[i].cid, &M->caveats[i].cid, ptr);
+        ptr = copy_slice(&N->caveats[i].vid, &M->caveats[i].vid, ptr);
+        ptr = copy_slice(&N->caveats[i].cl,  &M->caveats[i].cl,  ptr);
     }
 
-    ptr = create_cid_packet(predicate, predicate_sz,
-                            &M->caveats[M->num_caveats - 1].cid, ptr);
-    ptr = create_signature_packet(hash, MACAROON_HASH_BYTES, &M->signature, ptr);
+    ptr = copy_to_slice(predicate, predicate_sz,
+                        &M->caveats[M->num_caveats - 1].cid, ptr);
+    ptr = copy_to_slice(hash, MACAROON_HASH_BYTES, &M->signature, ptr);
     VALIDATE(M);
     return M;
 }
@@ -351,7 +322,6 @@ macaroon_add_third_party_caveat_raw(const struct macaroon* N,
                                     enum macaroon_returncode* err)
 {
     unsigned char new_sig[MACAROON_HASH_BYTES];
-    const unsigned char *old_sig;
     unsigned char enc_nonce[MACAROON_SECRET_NONCE_BYTES];
     unsigned char enc_plaintext[MACAROON_SECRET_TEXT_ZERO_BYTES + MACAROON_HASH_BYTES];
     unsigned char enc_ciphertext[MACAROON_SECRET_BOX_ZERO_BYTES + MACAROON_HASH_BYTES];
@@ -363,7 +333,6 @@ macaroon_add_third_party_caveat_raw(const struct macaroon* N,
     assert(location_sz < MACAROON_MAX_STRLEN);
     assert(id_sz < MACAROON_MAX_STRLEN);
     assert(key_sz == MACAROON_SUGGESTED_SECRET_LENGTH);
-    assert(N->signature.data && N->signature.size > PACKET_PREFIX);
     VALIDATE(N);
 
     if (N->num_caveats + 1 > MACAROON_MAX_CAVEATS)
@@ -373,11 +342,11 @@ macaroon_add_third_party_caveat_raw(const struct macaroon* N,
     }
 
     /*
-     * note that MACAROON_HASH_BYTES is the same as
+     * note that MACAROON_HASH_BYTES is necessarily the same as
      * MACAROON_SECRET_KEY_BYTES, so the signature is also good to use
       * as an encoding key
      */
-    if (parse_signature_packet(&N->signature, &old_sig) < 0)
+    if (!N->signature.data || N->signature.size != MACAROON_HASH_BYTES)
     {
         *err = MACAROON_INVALID;
         return NULL;
@@ -391,7 +360,7 @@ macaroon_add_third_party_caveat_raw(const struct macaroon* N,
     memmove(enc_plaintext + MACAROON_SECRET_TEXT_ZERO_BYTES, key,
             key_sz < MACAROON_HASH_BYTES ? key_sz : MACAROON_HASH_BYTES);
 
-    if (macaroon_secretbox(old_sig, enc_nonce, enc_plaintext,
+    if (macaroon_secretbox(N->signature.data, enc_nonce, enc_plaintext,
                 MACAROON_SECRET_TEXT_ZERO_BYTES + MACAROON_HASH_BYTES,
                 enc_ciphertext) < 0)
     {
@@ -401,22 +370,22 @@ macaroon_add_third_party_caveat_raw(const struct macaroon* N,
 
     /* copy the (nonce, vid) pair into vid */
     memmove(vid, enc_nonce, MACAROON_SECRET_NONCE_BYTES);
-    memmove(vid + MACAROON_SECRET_NONCE_BYTES,
+    memmove(vid           + MACAROON_SECRET_NONCE_BYTES,
             enc_ciphertext + MACAROON_SECRET_BOX_ZERO_BYTES,
             VID_NONCE_KEY_SZ - MACAROON_SECRET_NONCE_BYTES);
 
     /* calculate the new signature */
-    if (macaroon_hash2(old_sig, vid, VID_NONCE_KEY_SZ, id, id_sz, new_sig) < 0)
+    if (macaroon_hash2(N->signature.data, vid, VID_NONCE_KEY_SZ, id, id_sz, new_sig) < 0)
     {
         *err = MACAROON_HASH_FAILED;
         return NULL;
     }
 
-    sz  = macaroon_body_size(N);
-    sz += PACKET_SIZE(CID_SZ, id_sz);
-    sz += PACKET_SIZE(VID_SZ, VID_NONCE_KEY_SZ);
-    sz += PACKET_SIZE(CL_SZ, location_sz);
-    sz += PACKET_SIZE(SIGNATURE, MACAROON_HASH_BYTES);
+    sz = macaroon_body_size(N)
+       + id_sz
+       + VID_NONCE_KEY_SZ
+       + location_sz
+       + MACAROON_HASH_BYTES;
     M = macaroon_malloc(N->num_caveats + 1, sz, &ptr);
 
     if (!M)
@@ -426,20 +395,20 @@ macaroon_add_third_party_caveat_raw(const struct macaroon* N,
     }
 
     M->num_caveats = N->num_caveats + 1;
-    ptr = copy_packet(&N->location, &M->location, ptr);
-    ptr = copy_packet(&N->identifier, &M->identifier, ptr);
+    ptr = copy_slice(&N->location, &M->location, ptr);
+    ptr = copy_slice(&N->identifier, &M->identifier, ptr);
 
     for (i = 0; i < N->num_caveats; ++i)
     {
-        ptr = copy_packet(&N->caveats[i].cid, &M->caveats[i].cid, ptr);
-        ptr = copy_packet(&N->caveats[i].vid, &M->caveats[i].vid, ptr);
-        ptr = copy_packet(&N->caveats[i].cl,  &M->caveats[i].cl,  ptr);
+        ptr = copy_slice(&N->caveats[i].cid, &M->caveats[i].cid, ptr);
+        ptr = copy_slice(&N->caveats[i].vid, &M->caveats[i].vid, ptr);
+        ptr = copy_slice(&N->caveats[i].cl,  &M->caveats[i].cl,  ptr);
     }
 
-    ptr = create_cid_packet(id, id_sz, &M->caveats[M->num_caveats - 1].cid, ptr);
-    ptr = create_vid_packet(vid, VID_NONCE_KEY_SZ, &M->caveats[M->num_caveats - 1].vid, ptr);
-    ptr = create_cl_packet(location, location_sz, &M->caveats[M->num_caveats - 1].cl, ptr);
-    ptr = create_signature_packet(new_sig, MACAROON_HASH_BYTES, &M->signature, ptr);
+    ptr = copy_to_slice(id, id_sz, &M->caveats[M->num_caveats - 1].cid, ptr);
+    ptr = copy_to_slice(vid, VID_NONCE_KEY_SZ, &M->caveats[M->num_caveats - 1].vid, ptr);
+    ptr = copy_to_slice(location, location_sz, &M->caveats[M->num_caveats - 1].cl, ptr);
+    ptr = copy_to_slice(new_sig, MACAROON_HASH_BYTES, &M->signature, ptr);
     VALIDATE(M);
     return M;
 }
@@ -496,7 +465,6 @@ macaroon_third_party_caveat(const struct macaroon* M, unsigned which,
                             const unsigned char** location, size_t* location_sz,
                             const unsigned char** identifier, size_t* identifier_sz)
 {
-    int rc = 0;
     size_t idx = 0;
     unsigned count = 0;
     VALIDATE(M);
@@ -507,10 +475,8 @@ macaroon_third_party_caveat(const struct macaroon* M, unsigned which,
         {
             if (count == which)
             {
-                rc = parse_cid_packet(&M->caveats[idx].cid, identifier, identifier_sz);
-                assert(rc == 0);
-                rc = parse_cl_packet(&M->caveats[idx].cl, location, location_sz);
-                assert(rc == 0);
+                unstruct_slice(&M->caveats[idx].cid, identifier, identifier_sz);
+                unstruct_slice(&M->caveats[idx].cl, location, location_sz);
                 return 0;
             }
 
@@ -529,23 +495,20 @@ macaroon_prepare_for_request(const struct macaroon* M,
                              const struct macaroon* D,
                              enum macaroon_returncode* err)
 {
-    const unsigned char* Msig;
-    const unsigned char* MPsig;
     struct macaroon* B;
-    unsigned char* ptr;
     unsigned char hash[MACAROON_HASH_BYTES];
 
     VALIDATE(M);
     VALIDATE(D);
 
-    if (parse_signature_packet(&M->signature, &Msig) < 0 ||
-        parse_signature_packet(&D->signature, &MPsig) < 0)
+    if (!M->signature.data || M->signature.size != MACAROON_HASH_BYTES ||
+        !D->signature.data || D->signature.size != MACAROON_HASH_BYTES)
     {
         *err = MACAROON_INVALID;
         return NULL;
     }
 
-    if (macaroon_bind(Msig, MPsig, hash) < 0)
+    if (macaroon_bind(M->signature.data, D->signature.data, hash) < 0)
     {
         *err = MACAROON_HASH_FAILED;
         return NULL;
@@ -558,8 +521,7 @@ macaroon_prepare_for_request(const struct macaroon* M,
         return NULL;
     }
 
-    ptr = (unsigned char*) B->signature.data;
-    ptr = create_signature_packet(hash, MACAROON_HASH_BYTES, &B->signature, ptr);
+    memmove((unsigned char*)B->signature.data, hash, MACAROON_HASH_BYTES);
     VALIDATE(B);
     return B;
 }
@@ -708,7 +670,7 @@ macaroon_verify_inner_1st(const struct macaroon_verifier* V,
 
     pred.data = NULL;
     pred.size = 0;
-    fail |= parse_cid_packet(&C->cid, &pred.data, &pred.size);
+    unstruct_slice(&C->cid, &pred.data, &pred.size);
 
     for (idx = 0; idx < V->predicates_sz; ++idx)
     {
@@ -752,14 +714,14 @@ macaroon_verify_inner_3rd(const struct macaroon_verifier* V,
 
     cav.data = NULL;
     cav.size = 0;
-    fail |= parse_cid_packet(&C->cid, &cav.data, &cav.size);
+    unstruct_slice(&C->cid, &cav.data, &cav.size);
     tree[tree_idx] = MS_sz;
 
     for (midx = 0; midx < MS_sz; ++midx)
     {
         mac.data = NULL;
         mac.size = 0;
-        fail |= parse_identifier_packet(&MS[midx]->identifier, &mac.data, &mac.size);
+        unstruct_slice(&MS[midx]->identifier, &mac.data, &mac.size);
         sz = cav.size < mac.size ? cav.size : mac.size;
 
         if (macaroon_memcmp(cav.data, mac.data, sz) == 0 && cav.size == mac.size)
@@ -782,7 +744,7 @@ macaroon_verify_inner_3rd(const struct macaroon_verifier* V,
 
         vid.data = vid_data;
         vid.size = sizeof(vid_data);
-        fail |= parse_vid_packet(&C->vid, &vid.data, &vid.size);
+        unstruct_slice(&C->vid, &vid.data, &vid.size);
         assert(vid.size == VID_NONCE_KEY_SZ);
         /*
          * the nonce is in the first MACAROON_SECRET_NONCE_BYTES
@@ -844,11 +806,7 @@ macaroon_verify_inner(const struct macaroon_verifier* V,
     }
 
     tree_fail = 0;
-
-    data = NULL;
-    data_sz = 0;
-    tree_fail |= parse_identifier_packet(&M->identifier, &data, &data_sz);
-    tree_fail |= macaroon_hmac(key, key_sz, data, data_sz, csig);
+    tree_fail |= macaroon_hmac(key, key_sz, M->identifier.data, M->identifier.size, csig);
 
     for (cidx = 0; cidx < M->num_caveats; ++cidx)
     {
@@ -859,7 +817,7 @@ macaroon_verify_inner(const struct macaroon_verifier* V,
             memmove(tmp, csig, MACAROON_HASH_BYTES);
             data = NULL;
             data_sz = 0;
-            tree_fail |= parse_cid_packet(&M->caveats[cidx].cid, &data, &data_sz);
+            unstruct_slice(&M->caveats[cidx].cid, &data, &data_sz);
             tree_fail |= macaroon_hash1(tmp, data, data_sz, csig);
         }
         else
@@ -869,10 +827,10 @@ macaroon_verify_inner(const struct macaroon_verifier* V,
             memmove(tmp, csig, MACAROON_HASH_BYTES);
             data = NULL;
             data_sz = 0;
-            tree_fail |= parse_cid_packet(&M->caveats[cidx].cid, &data, &data_sz);
+            unstruct_slice(&M->caveats[cidx].cid, &data, &data_sz);
             vdata = NULL;
             vdata_sz = 0;
-            tree_fail |= parse_vid_packet(&M->caveats[cidx].vid, &vdata, &vdata_sz);
+            unstruct_slice(&M->caveats[cidx].vid, &vdata, &vdata_sz);
             tree_fail |= macaroon_hash2(tmp, vdata, vdata_sz, data, data_sz, csig);
         }
     }
@@ -881,12 +839,12 @@ macaroon_verify_inner(const struct macaroon_verifier* V,
     {
         memmove(tmp, csig, MACAROON_HASH_BYTES);
         data = TM->signature.data;
-        tree_fail |= parse_signature_packet(&TM->signature, &data);
+        tree_fail |= TM->signature.size ^ MACAROON_HASH_BYTES;
         tree_fail |= macaroon_bind(data, tmp, csig);
     }
 
     data = M->signature.data;
-    tree_fail |= parse_signature_packet(&M->signature, &data);
+    tree_fail |= M->signature.size ^ MACAROON_HASH_BYTES;
     tree_fail |= macaroon_memcmp(data, csig, MACAROON_HASH_BYTES);
     return tree_fail;
 }
@@ -949,154 +907,33 @@ MACAROON_API void
 macaroon_location(const struct macaroon* M,
                   const unsigned char** location, size_t* location_sz)
 {
-    int rc = 0;
     assert(M);
     VALIDATE(M);
-    rc = parse_location_packet(&M->location, location, location_sz);
-    assert(rc == 0);
+    unstruct_slice(&M->location, location, location_sz);
 }
 
 MACAROON_API void
 macaroon_identifier(const struct macaroon* M,
                     const unsigned char** identifier, size_t* identifier_sz)
 {
-    int rc = 0;
     assert(M);
     VALIDATE(M);
-    rc = parse_identifier_packet(&M->identifier, identifier, identifier_sz);
-    assert(rc == 0);
+    unstruct_slice(&M->identifier, identifier, identifier_sz);
 }
 
 MACAROON_API void
 macaroon_signature(const struct macaroon* M,
                    const unsigned char** signature, size_t* signature_sz)
 {
-    int rc = 0;
     assert(M);
     VALIDATE(M);
-    rc = parse_signature_packet(&M->signature, signature);
-    *signature_sz = MACAROON_HASH_BYTES;
-    assert(rc == 0);
+    unstruct_slice(&M->signature, signature, signature_sz);
 }
-
-enum encoding
-{
-    ENCODING_RAW,
-    ENCODING_BASE64,
-    ENCODING_HEX
-};
-
-static size_t
-encoded_size(enum encoding encoding, size_t data_sz)
-{
-    switch (encoding)
-    {
-    case ENCODING_HEX:
-        return data_sz * 2;
-    case ENCODING_BASE64:
-        return (data_sz + 2) / 3 * 4;
-    case ENCODING_RAW:
-        return data_sz;
-    default:
-        assert(0);
-    }
-}
-
-/*
- * encode encodes the given data, putting
- * the resulting data and size into result and result_sz.
- * On return, if *result != data, the caller is
- * responsible for freeing it.
- */
-static int
-encode(enum encoding encoding, 
-       const unsigned char* val, size_t val_sz,
-       const unsigned char** result, size_t* result_sz,
-       enum macaroon_returncode* err)
-{
-    char* enc;
-    int enc_sz;
-    if (encoding == ENCODING_RAW) {
-        *result = val;
-        *result_sz = val_sz;
-        return 0;
-    }
-    enc_sz = encoded_size(encoding, val_sz);
-    enc = malloc(enc_sz + 1);
-    if (enc == NULL)
-    {
-        *err = MACAROON_OUT_OF_MEMORY;
-        return -1;
-    }
-    switch (encoding)
-    {
-    case ENCODING_BASE64:
-        enc_sz = b64_ntop(val, val_sz, enc, enc_sz + 1);
-        if (enc_sz < 0)
-        {
-            *err = MACAROON_BUF_TOO_SMALL;
-            return -1;
-        }
-        break;
-    case ENCODING_HEX:
-        macaroon_bin2hex(val, val_sz, enc);
-        break;
-    case ENCODING_RAW: /* should never get here */
-    default:
-        assert(0);
-    }
-    *result = (const unsigned char*)enc;
-    *result_sz = enc_sz;
-    return 0;
-}
-
-static size_t
-macaroon_inner_size_hint(const struct macaroon* M)
-{
-    size_t i;
-    size_t sz = M->location.size
-              + M->identifier.size
-              + M->signature.size;
-
-    assert(M);
-    VALIDATE(M);
-
-    for (i = 0; i < M->num_caveats; ++i)
-    {
-        sz += M->caveats[i].cid.size;
-        sz += M->caveats[i].vid.size;
-        sz += M->caveats[i].cl.size;
-    }
-
-    return sz;
-}
-
-static size_t
-macaroon_inner_size_hint_ascii(const struct macaroon* M)
-{
-    size_t i;
-    size_t sz = M->location.size
-              + M->identifier.size
-              + encoded_size(ENCODING_HEX, M->signature.size);
-
-    assert(M);
-    VALIDATE(M);
-
-    for (i = 0; i < M->num_caveats; ++i)
-    {
-        sz += M->caveats[i].cid.size;
-        sz += encoded_size(ENCODING_BASE64, M->caveats[i].vid.size);
-        sz += M->caveats[i].cl.size;
-    }
-
-    return sz;
-}
-
 
 MACAROON_API size_t
 macaroon_serialize_size_hint(const struct macaroon* M)
 {
-    return encoded_size(ENCODING_BASE64, macaroon_inner_size_hint(M)) + 1;
+    return macaroon_serialize_size_hint_v1(M);
 }
 
 MACAROON_API int
@@ -1104,272 +941,19 @@ macaroon_serialize(const struct macaroon* M,
                    char* data, size_t data_sz,
                    enum macaroon_returncode* err)
 {
-    const size_t sz = macaroon_serialize_size_hint(M);
-    size_t i;
-    unsigned char* tmp = NULL;
-    unsigned char* ptr = NULL;
-    int rc = 0;
-
-    if (data_sz < sz)
-    {
-        *err = MACAROON_BUF_TOO_SMALL;
-        return -1;
-    }
-
-    tmp = malloc(sizeof(unsigned char) * sz);
-
-    if (!tmp)
-    {
-        *err = MACAROON_OUT_OF_MEMORY;
-        return -1;
-    }
-
-    ptr = tmp;
-    ptr = serialize_packet(&M->location, ptr);
-    ptr = serialize_packet(&M->identifier, ptr);
-
-    for (i = 0; i < M->num_caveats; ++i)
-    {
-        if (M->caveats[i].cid.size)
-        {
-            ptr = serialize_packet(&M->caveats[i].cid, ptr);
-        }
-
-        if (M->caveats[i].vid.size)
-        {
-            ptr = serialize_packet(&M->caveats[i].vid, ptr);
-        }
-
-        if (M->caveats[i].cl.size)
-        {
-            ptr = serialize_packet(&M->caveats[i].cl, ptr);
-        }
-    }
-
-    ptr = serialize_packet(&M->signature, ptr);
-    rc = b64_ntop(tmp, ptr - tmp, data, data_sz);
-    free(tmp);
-
-    if (rc < 0)
-    {
-        *err = MACAROON_BUF_TOO_SMALL;
-        return -1;
-    }
-
-    return 0;
+    return macaroon_serialize_v1(M, data, data_sz, err);
 }
 
 MACAROON_API struct macaroon*
-macaroon_deserialize(const char* _data, enum macaroon_returncode* err)
+macaroon_deserialize(const char* data, enum macaroon_returncode* err)
 {
-    size_t num_pkts = 0;
-    struct packet pkt = EMPTY_PACKET;
-    const size_t _data_sz = strlen(_data);
-    unsigned char* data = NULL;
-    const unsigned char* end = NULL;
-    const unsigned char* rptr = NULL;
-    unsigned char* wptr = NULL;
-    const unsigned char* tmp = NULL;
-    const unsigned char* sig;
-    const unsigned char* key;
-    const unsigned char* val;
-    size_t data_sz;
-    size_t key_sz;
-    size_t val_sz;
-    int b64_sz;
-    struct macaroon* M;
-
-    data = malloc(sizeof(unsigned char) * _data_sz);
-
-    if (!data)
-    {
-        *err = MACAROON_OUT_OF_MEMORY;
-        return NULL;
-    }
-
-    b64_sz = b64_pton(_data, data, _data_sz);
-
-    if (b64_sz <= 0)
-    {
-        *err = MACAROON_INVALID;
-        free(data);
-        return NULL;
-    }
-
-    if (data[0] == '{')
-    {
-        *err = MACAROON_NO_JSON_SUPPORT;
-        return NULL;
-    }
-
-    data_sz = b64_sz;
-    rptr = data;
-    end = rptr + data_sz;
-
-    while (rptr && rptr < end)
-    {
-        rptr = parse_packet(rptr, end, &pkt);
-        ++num_pkts;
-    }
-
-    if (!rptr || num_pkts < 3)
-    {
-        *err = MACAROON_INVALID;
-        free(data);
-        return NULL;
-    }
-
-    assert(num_pkts < data_sz);
-    M = macaroon_malloc((num_pkts - 3/*loc,id,sig*/), data_sz, &wptr);
-
-    if (!M)
-    {
-        *err = MACAROON_OUT_OF_MEMORY;
-        free(data);
-        return NULL;
-    }
-
-    rptr = data;
-    *err = MACAROON_INVALID;
-
-    /* location */
-    if (copy_if_parses(&rptr, end, parse_location_packet, &M->location, &wptr) < 0)
-    {
-        free(M);
-        free(data);
-        return NULL;
-    }
-
-    /* identifier */
-    if (copy_if_parses(&rptr, end, parse_identifier_packet, &M->identifier, &wptr) < 0)
-    {
-        free(M);
-        free(data);
-        return NULL;
-    }
-
-    M->num_caveats = 0;
-
-    while (1)
-    {
-        tmp = parse_packet(rptr, end, &pkt);
-
-        if (parse_kv_packet(&pkt, &key, &key_sz, &val, &val_sz) < 0)
-        {
-            break;
-        }
-
-        if (key_sz == CID_SZ && memcmp(key, CID, CID_SZ) == 0)
-        {
-            if (M->caveats[M->num_caveats].cid.size)
-            {
-                ++M->num_caveats;
-            }
-
-            wptr = copy_packet(&pkt, &M->caveats[M->num_caveats].cid, wptr);
-        }
-        else if (key_sz == VID_SZ && memcmp(key, VID, VID_SZ) == 0)
-        {
-            if (M->caveats[M->num_caveats].vid.size)
-            {
-                free(M);
-                free(data);
-                return NULL;
-            }
-
-            wptr = copy_packet(&pkt, &M->caveats[M->num_caveats].vid, wptr);
-        }
-        else if (key_sz == CL_SZ && memcmp(key, CL, CL_SZ) == 0)
-        {
-            if (M->caveats[M->num_caveats].cl.size)
-            {
-                free(M);
-                free(data);
-                return NULL;
-            }
-
-            wptr = copy_packet(&pkt, &M->caveats[M->num_caveats].cl, wptr);
-        }
-        else
-        {
-            break;
-        }
-
-        /* advance to the next packet */
-        rptr = tmp;
-    }
-
-    /* catch the tail packet */
-    if (M->caveats[M->num_caveats].cid.size)
-    {
-        ++M->num_caveats;
-    }
-
-    /* signature */
-    rptr = parse_packet(rptr, end, &pkt);
-    assert(rptr);
-
-    if (parse_signature_packet(&pkt, &sig) < 0)
-    {
-        free(M);
-        free(data);
-        return NULL;
-    }
-
-    wptr = copy_packet(&pkt, &M->signature, wptr);
-
-    if (macaroon_validate(M) < 0)
-    {
-        free(M);
-        free(data);
-        return NULL;
-    }
-
-    *err = MACAROON_SUCCESS;
-    return M;
+    return macaroon_deserialize_v1(data, err);
 }
 
 MACAROON_API size_t
 macaroon_inspect_size_hint(const struct macaroon* M)
 {
-    /* TODO why the extra MACAROON_HASH_BYTES here? */
-    return macaroon_inner_size_hint_ascii(M) + MACAROON_HASH_BYTES;
-}
-
-static char*
-inspect_packet(const struct packet* from,
-               enum encoding encoding,
-               char* ptr, char* ptr_end,
-               enum macaroon_returncode *err)
-{
-    const unsigned char* key = NULL;
-    const unsigned char* val = NULL;
-    const unsigned char* enc_val = NULL;
-    size_t key_sz = 0;
-    size_t val_sz = 0;
-    size_t enc_sz = 0;
-    size_t total_sz = 0;
-    int rc;
-    rc = parse_kv_packet(from, &key, &key_sz, &val, &val_sz);
-    assert(rc == 0);
-    if (encode(encoding, val, val_sz, &enc_val, &enc_sz, err) < 0)
-    {
-        return NULL;
-    }
-    total_sz = key_sz + 1 + enc_sz + 1;
-    assert(ptr_end >= ptr);
-    assert(total_sz <= (size_t)(ptr_end - ptr));
-
-    memmove(ptr, key, key_sz);
-    ptr[key_sz] = ' ';
-    memmove(ptr + key_sz + 1, enc_val, enc_sz);
-    ptr[key_sz + 1 + enc_sz] = '\n';
-
-    if (enc_val != val)
-    {
-        free((void *)enc_val);
-    }
-    return ptr + total_sz;
+    return macaroon_inspect_size_hint_v1(M);
 }
 
 MACAROON_API int
@@ -1377,66 +961,7 @@ macaroon_inspect(const struct macaroon* M,
                  char* data, size_t data_sz,
                  enum macaroon_returncode* err)
 {
-    const size_t sz = macaroon_inspect_size_hint(M);
-    size_t i = 0;
-    char* ptr = data;
-    char* ptr_end = data + data_sz;
-
-    if (data_sz < sz)
-    {
-        *err = MACAROON_BUF_TOO_SMALL;
-        return -1;
-    }
-
-    ptr = inspect_packet(&M->location, ENCODING_RAW, ptr, ptr_end, err);
-    if (ptr == NULL)
-    {
-        return -1;
-    }
-    ptr = inspect_packet(&M->identifier, ENCODING_RAW, ptr, ptr_end, err);
-    if (ptr == NULL)
-    {
-        return -1;
-    }
-
-    for (i = 0; i < M->num_caveats; ++i)
-    {
-        if (M->caveats[i].cid.size)
-        {
-            ptr = inspect_packet(&M->caveats[i].cid, ENCODING_RAW, ptr, ptr_end, err);
-            if (ptr == NULL)
-            {
-                return -1;
-            }
-        }
-
-        if (M->caveats[i].vid.size)
-        {
-            ptr = inspect_packet(&M->caveats[i].vid, ENCODING_BASE64, ptr, ptr_end, err);
-            if (ptr == NULL)
-            {
-                return -1;
-            }
-        }
-
-        if (M->caveats[i].cl.size)
-        {
-            ptr = inspect_packet(&M->caveats[i].cl, ENCODING_RAW, ptr, ptr_end, err);
-            if (ptr == NULL)
-            {
-                return -1;
-            }
-        }
-    }
-
-    ptr = inspect_packet(&M->signature, ENCODING_HEX, ptr, ptr_end, err);
-    if (ptr == NULL)
-    {
-        return -1;
-    }
-    /* Replace final newline with terminator. */
-    ptr[-1] = '\0';
-    return 0;
+    return macaroon_inspect_v1(M, data, data_sz, err);
 }
 
 MACAROON_API struct macaroon*
@@ -1451,9 +976,8 @@ macaroon_copy(const struct macaroon* N,
     assert(N);
     VALIDATE(N);
 
-    sz  = macaroon_body_size(N);
-    sz += PACKET_SIZE(SIGNATURE, MACAROON_HASH_BYTES);
-    M = macaroon_malloc(N->num_caveats + 1, sz, &ptr);
+    sz  = macaroon_body_size(N) + MACAROON_HASH_BYTES;
+    M = macaroon_malloc(N->num_caveats, sz, &ptr);
 
     if (!M)
     {
@@ -1462,17 +986,17 @@ macaroon_copy(const struct macaroon* N,
     }
 
     M->num_caveats = N->num_caveats;
-    ptr = copy_packet(&N->location, &M->location, ptr);
-    ptr = copy_packet(&N->identifier, &M->identifier, ptr);
+    ptr = copy_slice(&N->location, &M->location, ptr);
+    ptr = copy_slice(&N->identifier, &M->identifier, ptr);
 
     for (i = 0; i < N->num_caveats; ++i)
     {
-        ptr = copy_packet(&N->caveats[i].cid, &M->caveats[i].cid, ptr);
-        ptr = copy_packet(&N->caveats[i].vid, &M->caveats[i].vid, ptr);
-        ptr = copy_packet(&N->caveats[i].cl,  &M->caveats[i].cl,  ptr);
+        ptr = copy_slice(&N->caveats[i].cid, &M->caveats[i].cid, ptr);
+        ptr = copy_slice(&N->caveats[i].vid, &M->caveats[i].vid, ptr);
+        ptr = copy_slice(&N->caveats[i].cl,  &M->caveats[i].cl,  ptr);
     }
 
-    ptr = copy_packet(&N->signature, &M->signature, ptr);
+    ptr = copy_slice(&N->signature, &M->signature, ptr);
     VALIDATE(M);
     return M;
 }
@@ -1490,21 +1014,21 @@ macaroon_cmp(const struct macaroon* M, const struct macaroon* N)
     VALIDATE(N);
 
     ret |= M->num_caveats ^ N->num_caveats;
-    ret |= packet_cmp(&M->location, &N->location);
-    ret |= packet_cmp(&M->identifier, &N->identifier);
-    ret |= packet_cmp(&M->signature, &N->signature);
+    ret |= slice_cmp(&M->location, &N->location);
+    ret |= slice_cmp(&M->identifier, &N->identifier);
+    ret |= slice_cmp(&M->signature, &N->signature);
 
     num_caveats = M->num_caveats < N->num_caveats ?
                   M->num_caveats : N->num_caveats;
 
     for (i = 0; i < num_caveats; ++i)
     {
-        ret |= packet_cmp(&M->caveats[i].cid,
-                          &N->caveats[i].cid);
-        ret |= packet_cmp(&M->caveats[i].vid,
-                          &N->caveats[i].vid);
-        ret |= packet_cmp(&M->caveats[i].cl,
-                          &N->caveats[i].cl);
+        ret |= slice_cmp(&M->caveats[i].cid,
+                         &N->caveats[i].cid);
+        ret |= slice_cmp(&M->caveats[i].vid,
+                         &N->caveats[i].vid);
+        ret |= slice_cmp(&M->caveats[i].cl,
+                         &N->caveats[i].cl);
     }
 
     return ret;

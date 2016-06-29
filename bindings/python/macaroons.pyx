@@ -24,6 +24,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import binascii
+
 cdef extern from "stdlib.h":
 
     void* malloc(size_t size)
@@ -139,7 +141,7 @@ cdef class Macaroon:
         cdef size_t signature_sz = 0
         self.assert_not_null()
         macaroon_signature(self._M, &signature, &signature_sz)
-        return (signature[:signature_sz]).encode('hex')
+        return binascii.hexlify(signature[:signature_sz])
 
     def copy(self):
         self.assert_not_null()
@@ -275,6 +277,7 @@ cdef class Verifier:
 
     def satisfy_exact(self, pred):
         cdef macaroon_returncode err
+        pred = tobytes(pred)
         if macaroon_verifier_satisfy_exact(self._V, pred, len(pred), &err) < 0:
             raise_error(err)
 
@@ -337,9 +340,10 @@ def create(_location, _key, _key_id):
     return M
 
 
-def deserialize(bytes m):
+def deserialize(m):
     cdef Macaroon M = Macaroon()
     cdef macaroon_returncode err
+    m = tobytes(m)
     M._M = macaroon_deserialize(m, &err)
     if M._M == NULL:
         raise_error(err)

@@ -60,7 +60,8 @@ enum macaroon_returncode
     MACAROON_CYCLE            = 2053,
     MACAROON_BUF_TOO_SMALL    = 2054,
     MACAROON_NOT_AUTHORIZED   = 2055,
-    MACAROON_NO_JSON_SUPPORT  = 2056
+    MACAROON_NO_JSON_SUPPORT  = 2056,
+    MACAROON_UNSUPPORTED_FORMAT=2057
 };
 
 /* Create a new macaroon.

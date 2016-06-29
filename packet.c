@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, Robert Escriva
+/* Copyright (c) 2014-2016, Robert Escriva
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -99,35 +99,6 @@ parse_packet(const unsigned char* ptr,
 }
 
 int
-packet_cmp(const struct packet* lhs,
-           const struct packet* rhs)
-{
-    return macaroon_memcmp(lhs->data, rhs->data,
-                           (lhs->size < rhs->size) ? lhs->size : rhs->size);
-}
-
-unsigned char*
-create_kv_packet(const unsigned char* key, size_t key_sz,
-                 const unsigned char* val, size_t val_sz,
-                 struct packet* pkt, unsigned char* ptr)
-{
-    size_t sz = PACKET_PREFIX + 2 + key_sz + val_sz;
-
-    pkt->data = ptr;
-    pkt->size = sz;
-
-    memset(ptr, 0, sz);
-    ptr = packet_header(sz, ptr);
-    ptr = packet_memmove(ptr, key, key_sz);
-    *ptr = ' ';
-    ++ptr;
-    ptr = packet_memmove(ptr, val, val_sz);
-    *ptr = '\n';
-    ++ptr;
-    return ptr;
-}
-
-int
 parse_kv_packet(const struct packet* pkt,
                 const unsigned char** key, size_t* key_sz,
                 const unsigned char** val, size_t* val_sz)
@@ -170,22 +141,21 @@ parse_kv_packet(const struct packet* pkt,
 }
 
 unsigned char*
-copy_packet(const struct packet* from,
-            struct packet* to,
-            unsigned char* ptr)
+serialize_slice_as_packet(const char* _key, size_t key_sz,
+                          const struct slice* from,
+                          unsigned char* ptr)
 {
-    memmove(ptr, from->data, from->size);
-    to->data = ptr;
-    to->size = from->size;
-    return ptr + to->size;
-}
-
-unsigned char*
-serialize_packet(const struct packet* from,
-                 unsigned char* ptr)
-{
-    memmove(ptr, from->data, from->size);
-    return ptr + from->size;
+    const unsigned char* key = (const unsigned char*) _key;
+    size_t sz = PACKET_PREFIX + 2 + key_sz + from->size;
+    memset(ptr, 0, sz);
+    ptr = packet_header(sz, ptr);
+    ptr = packet_memmove(ptr, key, key_sz);
+    *ptr = ' ';
+    ++ptr;
+    ptr = packet_memmove(ptr, from->data, from->size);
+    *ptr = '\n';
+    ++ptr;
+    return ptr;
 }
 
 int
@@ -193,7 +163,7 @@ copy_if_parses(const unsigned char** rptr,
                const unsigned char* const end,
                int (*f)(const struct packet* pkt,
                         const unsigned char** s, size_t* s_sz),
-               struct packet* to,
+               struct slice* to,
                unsigned char** wptr)
 {
     const unsigned char* tmp;
@@ -207,16 +177,8 @@ copy_if_parses(const unsigned char** rptr,
         return -1;
     }
 
-    *wptr = copy_packet(&pkt, to, *wptr);
+    *wptr = copy_to_slice(tmp, tmp_sz, to, *wptr);
     return 0;
-}
-
-unsigned char*
-create_location_packet(const unsigned char* location, size_t location_sz,
-                       struct packet* pkt, unsigned char* ptr)
-{
-    return create_kv_packet((const unsigned char*)LOCATION, LOCATION_SZ,
-                            location, location_sz, pkt, ptr);
 }
 
 int
@@ -244,14 +206,6 @@ parse_location_packet(const struct packet* packet,
     return 0;
 }
 
-unsigned char*
-create_identifier_packet(const unsigned char* identifier, size_t identifier_sz,
-                         struct packet* pkt, unsigned char* ptr)
-{
-    return create_kv_packet((const unsigned char*)IDENTIFIER, IDENTIFIER_SZ,
-                            identifier, identifier_sz, pkt, ptr);
-}
-
 int
 parse_identifier_packet(const struct packet* packet,
                         const unsigned char** identifier, size_t* identifier_sz)
@@ -275,14 +229,6 @@ parse_identifier_packet(const struct packet* packet,
     *identifier = val;
     *identifier_sz = val_sz;
     return 0;
-}
-
-unsigned char*
-create_signature_packet(const unsigned char* signature, size_t signature_sz,
-                        struct packet* pkt, unsigned char* ptr)
-{
-    return create_kv_packet((const unsigned char*)SIGNATURE, SIGNATURE_SZ,
-                            signature, signature_sz, pkt, ptr);
 }
 
 int
@@ -310,14 +256,6 @@ parse_signature_packet(const struct packet* packet,
     return 0;
 }
 
-unsigned char*
-create_cid_packet(const unsigned char* cid, size_t cid_sz,
-                  struct packet* pkt, unsigned char* ptr)
-{
-    return create_kv_packet((const unsigned char*)CID, CID_SZ,
-                            cid, cid_sz, pkt, ptr);
-}
-
 int
 parse_cid_packet(const struct packet* packet,
                  const unsigned char** cid, size_t* cid_sz)
@@ -342,14 +280,6 @@ parse_cid_packet(const struct packet* packet,
     return 0;
 }
 
-unsigned char*
-create_vid_packet(const unsigned char* vid, size_t vid_sz,
-                  struct packet* pkt, unsigned char* ptr)
-{
-    return create_kv_packet((const unsigned char*)VID, VID_SZ,
-                            vid, vid_sz, pkt, ptr);
-}
-
 int
 parse_vid_packet(const struct packet* packet,
                  const unsigned char** vid, size_t* vid_sz)
@@ -372,14 +302,6 @@ parse_vid_packet(const struct packet* packet,
     *vid = val;
     *vid_sz = val_sz;
     return 0;
-}
-
-unsigned char*
-create_cl_packet(const unsigned char* cl, size_t cl_sz,
-                 struct packet* pkt, unsigned char* ptr)
-{
-    return create_kv_packet((const unsigned char*)CL, CL_SZ,
-                            cl, cl_sz, pkt, ptr);
 }
 
 int

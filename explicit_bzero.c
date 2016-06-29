@@ -4,6 +4,8 @@
  * Written by Matthew Dempsky.
  */
 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 #include <string.h>
 
 __attribute__((weak)) void

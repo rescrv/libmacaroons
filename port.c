@@ -97,7 +97,6 @@ macaroon_hmac(const unsigned char* _key, size_t _key_sz,
               const unsigned char* text, size_t text_sz,
               unsigned char* hash)
 {
-    int rc;
     unsigned char key[MACAROON_HASH_BYTES];
     explicit_bzero(key, MACAROON_HASH_BYTES);
     memmove(key, _key, _key_sz < sizeof(key) ? _key_sz : sizeof(key));
@@ -126,7 +125,7 @@ macaroon_secretbox_open(const unsigned char* enc_key,
 void
 macaroon_bin2hex(const unsigned char* bin, size_t bin_sz, char* hex)
 {
-    const static char hexes[] = "0123456789abcdef";
+    static const char hexes[] = "0123456789abcdef";
 
     for (size_t i = 0; i < bin_sz; ++i)
     {

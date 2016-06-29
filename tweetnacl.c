@@ -8,6 +8,8 @@
 #include <bsd/stdlib.h>
 #endif
 
+#pragma GCC diagnostic ignored "-Wsign-compare"
+
 #define FOR(i,n) for (i = 0;i < n;++i)
 #define sv static void
 

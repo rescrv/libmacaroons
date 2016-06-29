@@ -29,6 +29,8 @@ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGE.
 #endif
 
+#pragma GCC diagnostic ignored "-Wunsafe-loop-optimizations"
+
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>

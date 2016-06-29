@@ -29,8 +29,11 @@
 #ifndef macaroons_packet_h_
 #define macaroons_packet_h_
 
-/* c */
+/* C */
 #include <stddef.h>
+
+/* macaroons */
+#include "slice.h"
 
 #define PACKET_PREFIX 4
 #define PACKET_SIZE(KEY, VAL) (PACKET_PREFIX + STRLENOF(KEY) + (VAL) + 2)
@@ -50,18 +53,9 @@ parse_packet(const unsigned char* ptr,
              const unsigned char* const end,
              struct packet* pkt);
 
-/* 0 if equal; !0 if non-equal; no other comparison implied */
-int
-packet_cmp(const struct packet* lhs,
-           const struct packet* rhs);
-
 /* A key-value packet has this form:
  * <4 byte header><key><space><value><new-line>
  */
-unsigned char*
-create_kv_packet(const unsigned char* key, size_t key_sz,
-                 const unsigned char* val, size_t val_sz,
-                 struct packet* pkt, unsigned char* ptr);
 int
 parse_kv_packet(const struct packet* pkt,
                 const unsigned char** key, size_t* key_sz,
@@ -69,64 +63,28 @@ parse_kv_packet(const struct packet* pkt,
 
 /* copy a packet to the memory pointed to by ptr */
 unsigned char*
-copy_packet(const struct packet* from,
-            struct packet* to,
-            unsigned char* ptr);
-unsigned char*
-serialize_packet(const struct packet* from,
-                 unsigned char* ptr);
+serialize_slice_as_packet(const char* key, size_t key_sz,
+                          const struct slice* from,
+                          unsigned char* ptr);
 int
 copy_if_parses(const unsigned char** rptr,
                const unsigned char* const end,
                int (*f)(const struct packet* pkt,
                         const unsigned char** s, size_t* s_sz),
-               struct packet* to,
+               struct slice* to,
                unsigned char** wptr);
 
-/* create a location packet */
-unsigned char*
-create_location_packet(const unsigned char* location, size_t location_sz,
-                       struct packet* pkt, unsigned char* ptr);
-int
-parse_location_packet(const struct packet* pkt,
-                      const unsigned char** location, size_t* location_sz);
-
-/* create a identifier packet */
-unsigned char*
-create_identifier_packet(const unsigned char* identifier, size_t identifier_sz,
-                         struct packet* pkt, unsigned char* ptr);
-int
-parse_identifier_packet(const struct packet* pkt,
-                        const unsigned char** identifier, size_t* identifier_sz);
-
-/* create a signature packet */
-unsigned char*
-create_signature_packet(const unsigned char* signature, size_t sig_sz,
-                        struct packet* pkt, unsigned char* ptr);
-int
-parse_signature_packet(const struct packet* pkt,
-                       const unsigned char** signature);
-
-/* caveat packets */
-unsigned char*
-create_cid_packet(const unsigned char* cid, size_t cid_sz,
-                  struct packet* pkt, unsigned char* ptr);
-int
-parse_cid_packet(const struct packet* pkt,
-                 const unsigned char** cid, size_t* cid_sz);
-
-unsigned char*
-create_vid_packet(const unsigned char* vid, size_t vid_sz,
-                  struct packet* pkt, unsigned char* ptr);
-int
-parse_vid_packet(const struct packet* pkt,
-                 const unsigned char** vid, size_t* vid_sz);
-
-unsigned char*
-create_cl_packet(const unsigned char* cl, size_t cl_sz,
-                 struct packet* pkt, unsigned char* ptr);
-int
-parse_cl_packet(const struct packet* pkt,
-                const unsigned char** cl, size_t* cl_sz);
+int parse_location_packet(const struct packet* pkt,
+                          const unsigned char** location, size_t* location_sz);
+int parse_identifier_packet(const struct packet* pkt,
+                            const unsigned char** identifier, size_t* identifier_sz);
+int parse_signature_packet(const struct packet* pkt,
+                           const unsigned char** signature);
+int parse_cid_packet(const struct packet* pkt,
+                     const unsigned char** cid, size_t* cid_sz);
+int parse_vid_packet(const struct packet* pkt,
+                     const unsigned char** vid, size_t* vid_sz);
+int parse_cl_packet(const struct packet* pkt,
+                    const unsigned char** cl, size_t* cl_sz);
 
 #endif /* macaroons_packet_h_ */
