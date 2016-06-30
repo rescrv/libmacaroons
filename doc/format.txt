@@ -10,16 +10,16 @@ Binary Format
 Terminal tokens are in all-capitals, and all except for EOS and VERSION are
 byte sequences in the following format:
 
-	<field type: varuint64> <field length: varuint64=N> <field content: N bytes>
+    <field type: varuint64> <field length: varuint64=N> <field content: N bytes>
 
 where varuint64 describes an unsigned integer in variable length
 encoding, as described here.
 
-	https://developers.google.com/protocol-buffers/docs/encoding#varints
+    https://developers.google.com/protocol-buffers/docs/encoding#varints
 
 To paraphrase that description, a varuint64 number consists of a sequence of bytes:
 
-	x1, x2, ..., xn
+    x1, x2, ..., xn
 
 where x1... x(n-1) are in the range 0x80 to 0xff and xn is in the range
 0x0..0x7f. That is, all but the last byte has its most significant bit set.
@@ -29,10 +29,10 @@ least-significant bits first.
 
 Field type values for the terminal tokens are as follows:
 
-	LOCATION=1
-	IDENTIFIER=2
-	VID=4
-	SIGNATURE=6
+    LOCATION=1
+    IDENTIFIER=2
+    VID=4
+    SIGNATURE=6
 
 EOS is the single byte zero.
 VERSION is a single byte with the value 2.
@@ -42,15 +42,15 @@ The grammar is as follows, in YACC-like syntax:
 macaroon: VERSION opt_location IDENTIFIER EOS caveats EOS SIGNATURE
 
 caveats: caveat caveats
-        | EOS
+       | EOS
 
 caveat: opt_location IDENTIFIER opt_vid EOS
 
 opt_vid:
-	| VID
+       | VID
 
 opt_location:
-         | LOCATION
+            | LOCATION
 
 
 JSON Format
@@ -87,18 +87,18 @@ representation of the same field.
 
 For example, all the following objects encode a caveat with the same id:
 
-	{"i": "Ou?T"}
-	{"iH": "4f753f54"}
-	{"iH": "4F753F54"}
-	{"iH": "4f753F54"}
-	{"i64": "T3U/VA=="}
-	{"i64": "T3U_VA=="}
-	{"i64": "T3U/VA"}
-	{"i64": "T3U_VA"}
+    {"i": "Ou?T"}
+    {"iH": "4f753f54"}
+    {"iH": "4F753F54"}
+    {"iH": "4f753F54"}
+    {"i64": "T3U/VA=="}
+    {"i64": "T3U_VA=="}
+    {"i64": "T3U/VA"}
+    {"i64": "T3U_VA"}
 
 The following object is an invalid caveat:
 
-	{"i": "foo", "iH": "666f6f"}
+    {"i": "foo", "iH": "666f6f"}
 
 The JSON object fields as are follows.
 
@@ -118,6 +118,6 @@ Each caveat is an object holding the following fields:
 `i` (data): The caveat identifier.
 
 `l` (optional string): The location of a third party caveat.
-	This must not be present if the VID (`v` field) is present.
+    This must not be present if the VID (`v` field) is present.
 
 `v` (data): The verification id (VID).
