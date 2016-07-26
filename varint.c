@@ -56,3 +56,17 @@ unpackvarint(const unsigned char* ptr,
 
     return NULL;
 }
+
+unsigned
+varint_length(uint64_t v)
+{
+    int len = 1;
+
+    while (v >= 128)
+    {
+        v >>= 7;
+        len++;
+    }
+
+    return len;
+}

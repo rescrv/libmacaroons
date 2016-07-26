@@ -67,13 +67,22 @@ cdef extern from "macaroons.h":
     void macaroon_location(const macaroon* M, const unsigned char** location, size_t* location_sz)
     void macaroon_identifier(const macaroon* M, const unsigned char** identifier, size_t* identifier_sz)
     void macaroon_signature(const macaroon* M, const unsigned char** signature, size_t* signature_sz)
-    size_t macaroon_serialize_size_hint(macaroon* M)
-    int macaroon_serialize(macaroon* M, char* data, size_t data_sz, macaroon_returncode* err)
-    macaroon* macaroon_deserialize(unsigned char* data, size_t data_sz, macaroon_returncode* err)
     size_t macaroon_inspect_size_hint(macaroon* M)
     int macaroon_inspect(macaroon* M, char* data, size_t data_sz, macaroon_returncode* err)
     macaroon* macaroon_copy(macaroon* M, macaroon_returncode* err)
     int macaroon_cmp(macaroon* M, macaroon* N)
+
+    cdef enum macaroon_format:
+        MACAROON_V1
+        MACAROON_V2
+        MACAROON_V2J
+    cdef macaroon_format MACAROON_LATEST
+    cdef macaroon_format MACAROON_LATEST_JSON
+    size_t macaroon_serialize_size_hint(const macaroon* M, macaroon_format f);
+    size_t macaroon_serialize(const macaroon* M, macaroon_format f,
+                              char* buf, size_t buf_sz,
+                              macaroon_returncode* err);
+    macaroon* macaroon_deserialize(unsigned char* data, size_t data_sz, macaroon_returncode* err)
 
 
 SUGGESTED_SECRET_LENGTH = 32
@@ -152,17 +161,18 @@ cdef class Macaroon:
             raise_error(err)
         return M
 
-    def serialize(self):
+    def serialize(self, format='latest'):
+        cdef macaroon_format f = self.version(format)
         cdef char* data = NULL
         cdef size_t data_sz = 0
         cdef macaroon_returncode err
         self.assert_not_null()
         try:
-            data_sz = macaroon_serialize_size_hint(self._M)
+            data_sz = macaroon_serialize_size_hint(self._M, f)
             data = <char*>malloc(sizeof(unsigned char) * data_sz)
             if data == NULL:
                 raise MemoryError
-            if macaroon_serialize(self._M, data, data_sz, &err) < 0:
+            if macaroon_serialize(self._M, f, data, data_sz, &err) < 0:
                 raise_error(err)
             return bytes(data)
         finally:
@@ -250,6 +260,17 @@ cdef class Macaroon:
     cdef assert_not_null(self):
         if self._M == NULL:
             raise ValueError("macaroon not initialized")
+
+    cdef macaroon_format version(self, v):
+        cdef macaroon_format f = {'latest': MACAROON_LATEST,
+                                  'binary': MACAROON_LATEST,
+                                  'json': MACAROON_LATEST_JSON,
+                                  '2j': MACAROON_V2J,
+                                  2: MACAROON_V2,
+                                  '2': MACAROON_V2,
+                                  1: MACAROON_V1,
+                                  '1': MACAROON_V1}[v]
+        return f
 
 
 cdef int general_cb(void* f, const unsigned char* pred, size_t pred_sz):

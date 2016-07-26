@@ -26,55 +26,28 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* need to rely upon assert always asserting */
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
+#ifndef macaroons_v2_h_
+#define macaroons_v2_h_
 
 /* C */
-#include <assert.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
+#include <stdlib.h>
 
 /* macaroons */
-#include "varint.h"
+#include "base64.h"
+#include "macaroons.h"
+#include "macaroons-inner.h"
+#include "port.h"
 
-void
-varint_verify(uint64_t value, const char* representation)
-{
-    const unsigned sz = strlen(representation);
-    assert(sz % 2 == 0);
-    unsigned char buf[VARINT_MAX_SIZE];
-    uint64_t eulav;
-    assert(packvarint(value, buf) == buf + sz / 2);
-    assert(unpackvarint(buf, buf + VARINT_MAX_SIZE, &eulav) == buf + sz / 2);
-    assert(value == eulav);
+size_t
+macaroon_serialize_size_hint_v2(const struct macaroon* M);
 
-    for (unsigned i = 0; i < sz / 2; ++i)
-    {
-        char hex[3];
-        snprintf(hex, 3, "%02x", buf[i] & 0xff);
-        assert(hex[0] == representation[2 * i]);
-        assert(hex[1] == representation[2 * i + 1]);
-    }
-}
+size_t
+macaroon_serialize_v2(const struct macaroon* M,
+                      unsigned char* data, size_t data_sz,
+                      enum macaroon_returncode* err);
 
-int
-main(int argc, const char* argv[])
-{
-    (void)argc;
-    (void)argv;
-    varint_verify(0ULL, "00");
-    varint_verify(5ULL, "05");
-    varint_verify(127ULL, "7f");
-    varint_verify(128ULL, "8001");
-    varint_verify(16383ULL, "ff7f");
-    varint_verify(16384ULL, "808001");
-    varint_verify(16385ULL, "818001");
-    varint_verify(16386ULL, "828001");
-    varint_verify(16387ULL, "838001");
-    varint_verify(16388ULL, "848001");
-    varint_verify(3735928559ULL, "effdb6f50d");
-    varint_verify(18446744073709551615ULL, "ffffffffffffffffff01");
-}
+struct macaroon*
+macaroon_deserialize_v2(const unsigned char* data, size_t data_sz,
+                        enum macaroon_returncode* err);
+
+#endif /* macaroons_v2_h_ */

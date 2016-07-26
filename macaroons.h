@@ -177,12 +177,30 @@ macaroon_signature(const struct macaroon* M,
                    const unsigned char** signature, size_t* signature_sz);
 
 /* Serialize and deserialize macaroons */
-size_t
-macaroon_serialize_size_hint(const struct macaroon* M);
+enum macaroon_format
+{
+    MACAROON_V1,
+    MACAROON_V2,
+    MACAROON_V2J
+};
+#define MACAROON_LATEST MACAROON_V2
+#define MACAROON_LATEST_JSON MACAROON_V2J
 
-int
+/* a return value of 0 indicates an unsupported format
+ * a return value >0 indicates the number of bytes necessary to serialize M
+ * using format f
+ */
+size_t
+macaroon_serialize_size_hint(const struct macaroon* M,
+                             enum macaroon_format f);
+
+/* a return value of 0 indicates an error;
+ * a return value >0 indicates the number of bytes written to the buffer
+ */
+size_t
 macaroon_serialize(const struct macaroon* M,
-                   char* data, size_t data_sz,
+                   enum macaroon_format f,
+                   unsigned char* buf, size_t buf_sz,
                    enum macaroon_returncode* err);
 
 struct macaroon*

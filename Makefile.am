@@ -34,7 +34,7 @@ TESTS_ENVIRONMENT = . $(abs_top_srcdir)/test/env.sh "${abs_top_srcdir}" "${abs_t
 
 pyx_verbose = $(pyx_verbose_$(V))
 pyx_verbose_ = $(pyx_verbose_$(AM_DEFAULT_VERBOSITY))
-pyx_verbose_0 = @echo "  PYX   " $@;
+pyx_verbose_0 = @echo "  PYX     " $@;
 
 EXTRA_DIST  =
 EXTRA_DIST += README
@@ -53,6 +53,7 @@ libmacaroons_la_SOURCES += packet.c
 libmacaroons_la_SOURCES += slice.c
 libmacaroons_la_SOURCES += port.c
 libmacaroons_la_SOURCES += v1.c
+libmacaroons_la_SOURCES += v2.c
 libmacaroons_la_SOURCES += varint.c
 libmacaroons_la_SOURCES += explicit_bzero.c
 libmacaroons_la_SOURCES += timingsafe_bcmp.c
@@ -71,10 +72,12 @@ EXTRA_DIST += test/python-hmac-sanity-check
 EXTRA_DIST += test/python-hmac-sanity-check.sh
 EXTRA_DIST += test/readme.sh
 
+check_SCRIPTS =
 check_LTLIBRARIES = libmacaroons-shim.la
 check_PROGRAMS =
 check_PROGRAMS += test/varint
-check_PROGRAMS += macaroon-test-runner
+check_PROGRAMS += macaroon-test-verifier
+check_PROGRAMS += macaroon-test-serialization
 
 libmacaroons_shim_la_SOURCES = shim.c explicit_bzero.c
 libmacaroons_shim_la_LDFLAGS = -module -avoid-version -rpath /evil/libtool/hack/to/force/shared/lib/creation
@@ -89,21 +92,37 @@ TESTS += test/varint
 test_varint_SOURCES = test/varint.c varint.c
 test_varint_CFLAGS = $(AM_CFLAGS) $(CFLAGS)
 
-macaroon_test_runner_SOURCES = test/macaroon-test-runner.c base64.c
-macaroon_test_runner_LDADD = libmacaroons.la
-macaroon_test_runner_CFLAGS = $(AM_CFLAGS) $(CFLAGS)
+macaroon_test_verifier_SOURCES = macaroon-test-verifier.c base64.c
+macaroon_test_verifier_LDADD = libmacaroons.la
+macaroon_test_verifier_CFLAGS = $(AM_CFLAGS) $(CFLAGS)
+
+macaroon_test_serialization_SOURCES = macaroon-test-serialization.c base64.c
+macaroon_test_serialization_LDADD = libmacaroons.la
+macaroon_test_serialization_CFLAGS = $(AM_CFLAGS) $(CFLAGS)
 
 macaroon_unit_test_stubs =
 macaroon_unit_test_stubs += test/unit/caveat_v1_1.vtest.sh
 macaroon_unit_test_stubs += test/unit/caveat_v1_2.vtest.sh
 macaroon_unit_test_stubs += test/unit/caveat_v1_3.vtest.sh
+macaroon_unit_test_stubs += test/unit/caveat_v1_4.vtest.sh
+macaroon_unit_test_stubs += test/unit/caveat_v1_5.vtest.sh
+macaroon_unit_test_stubs += test/unit/caveat_v1_6.vtest.sh
+macaroon_unit_test_stubs += test/unit/caveat_v2_1.vtest.sh
+macaroon_unit_test_stubs += test/unit/caveat_v2_2.vtest.sh
+macaroon_unit_test_stubs += test/unit/caveat_v2_3.vtest.sh
+macaroon_unit_test_stubs += test/unit/caveat_v2_4.vtest.sh
+macaroon_unit_test_stubs += test/unit/caveat_v2_5.vtest.sh
+macaroon_unit_test_stubs += test/unit/caveat_v2_6.vtest.sh
 macaroon_unit_test_stubs += test/unit/root_v1_1.vtest.sh
 macaroon_unit_test_stubs += test/unit/root_v1_2.vtest.sh
+macaroon_unit_test_stubs += test/unit/root_v2_1.vtest.sh
+macaroon_unit_test_stubs += test/unit/root_v2_2.vtest.sh
+macaroon_unit_test_stubs += test/unit/serialization_1.sh
+macaroon_unit_test_stubs += test/unit/serialization_2.sh
+macaroon_unit_test_stubs += test/unit/serialization_3.sh
 
 TESTS += $(macaroon_unit_test_stubs)
-check_SCRIPTS =
 check_SCRIPTS += $(macaroon_unit_test_stubs)
-
 
 #################################### Python ####################################
 

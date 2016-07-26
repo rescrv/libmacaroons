@@ -25,4 +25,7 @@ unpackvarint(const unsigned char* ptr,
              const unsigned char* end,
              uint64_t* value);
 
+unsigned
+varint_length(uint64_t v);
+
 #endif /* macaroons_varint_h_ */

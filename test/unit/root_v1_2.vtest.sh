@@ -1,2 +1,2 @@
 #!/bin/sh
-exec macaroon-test-runner < test/unit/root_v1_2.vtest
+exec macaroon-test-verifier < test/unit/root_v1_2.vtest

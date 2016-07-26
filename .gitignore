@@ -24,7 +24,8 @@
 /libtool
 /ltmain.sh
 /m4
-/macaroon-test-runner
+/macaroon-test-verifier
+/macaroon-test-serialization
 /Makefile
 /Makefile.in
 /missing

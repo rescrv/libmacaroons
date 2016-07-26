@@ -69,4 +69,25 @@ their equivalents in other implementations):
 Serialization Tests
 -------------------
 
-XXX write these and some tests
+Serialization tests provide serialized macaroons for reference.  Each file
+contains a set of macaroons that are serialized differently, but represent the
+same logical macaroon.  It is up to the implementation to decide how to use
+these reference macaroons.  It is suggested that an implementation:
+
+ - Deserialize each supported macaroon format and compare them the in-memory
+   structures to each other to confirm that they are equivalent
+ - Serialize each macaroon into each format and confirm that the output
+   matches the reference form.  Failing that, the implementation should
+   serialize and deserialize the macaroon repeatedly, verifying that each
+   serialized form deserializes to something equivalent to the macaroon.  The
+   implementation need only repeat until a previously serialized form is
+   encountered.
+
+The serialization format contains one macaroon per line, where each macaroon
+is labelled with the version of the macaroon.  Each macaroon is base-64
+encoded to avoid having to parse binary data from the test file.  The decoded
+form of the line corresponds to a macaroon in one of the serialized formats
+specified in "version".  A sample file looks like this:
+
+    v1 TURBeU1XeHZZMkYwYVc5dUlHaDBkSEE2THk5bGVHRnRjR3hsTG05eVp5OEtNREF4Tldsa1pXNTBhV1pwWlhJZ2EyVjVhV1FLTURBeVpuTnBaMjVoZEhWeVpTQjgzdWVTVVJ4Ynh2VW9TRmdGMy1teVRuaGVLT0twa3dINTF4SEdDZU9POXdv
+    v2 AgETaHR0cDovL2V4YW1wbGUub3JnLwIFa2V5aWQAAAAGIHze55JRHFvG9ShIWAXf6bJOeF4o4qmTAfnXEcYJ4473

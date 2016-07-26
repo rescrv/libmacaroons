@@ -150,7 +150,7 @@ We can share this macaroon with others by serializing it.  The serialized form
 is pure-ASCII, and is safe for inclusion in secure email, a standard HTTPS
 cookie, or a URL.   We can get the serialized form with:
 
-    >>> M.serialize()
+    >>> M.serialize(format=1)
     'MDAxY2xvY2F0aW9uIGh0dHA6Ly9teWJhbmsvCjAwMjZpZGVudGlmaWVyIHdlIHVzZWQgb3VyIHNlY3JldCBrZXkKMDAyZnNpZ25hdHVyZSDj2eApCFJsTAA5rhURQRXZf91ovyujebNCqvD2F9BVLwo'
 
 Of course, this serialized form can be displayed in a more human-readable form
@@ -207,7 +207,7 @@ macaroon to the bank any time she wishes to prove to the bank that she is
 authorized to access her account.  Ideally, she'll transmit the serialized form
 of the macaroon to the bank:
 
-    >>> msg = M.serialize()
+    >>> msg = M.serialize(format=1)
     >>> # send msg to the bank
 
 Verifying Macaroons

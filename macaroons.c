@@ -56,6 +56,7 @@
 #include "port.h"
 #include "slice.h"
 #include "v1.h"
+#include "v2.h"
 
 #if MACAROON_HASH_BYTES != MACAROON_SECRET_KEY_BYTES
 #error bad constants
@@ -955,17 +956,36 @@ macaroon_signature(const struct macaroon* M,
 }
 
 MACAROON_API size_t
-macaroon_serialize_size_hint(const struct macaroon* M)
+macaroon_serialize_size_hint(const struct macaroon* M,
+                             enum macaroon_format f)
 {
-    return macaroon_serialize_size_hint_v1(M);
+    switch (f)
+    {
+        case MACAROON_V1:
+            return macaroon_serialize_size_hint_v1(M);
+        case MACAROON_V2:
+            return macaroon_serialize_size_hint_v2(M);
+        default:
+            return 0;
+    }
 }
 
-MACAROON_API int
+MACAROON_API size_t
 macaroon_serialize(const struct macaroon* M,
-                   char* data, size_t data_sz,
+                   enum macaroon_format f,
+                   unsigned char* buf, size_t buf_sz,
                    enum macaroon_returncode* err)
 {
-    return macaroon_serialize_v1(M, data, data_sz, err);
+    switch (f)
+    {
+        case MACAROON_V1:
+            if (macaroon_serialize_v1(M, (char*)buf, buf_sz, err) < 0) return 0;
+            return strlen((char*)buf);
+        case MACAROON_V2:
+            return macaroon_serialize_v2(M, buf, buf_sz, err);
+        default:
+            return 0;
+    }
 }
 
 static const char v1_chars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/-_";
@@ -985,8 +1005,20 @@ macaroon_deserialize(const unsigned char* data, size_t data_sz,
         return macaroon_deserialize_v1((const char*)data, data_sz, err);
     }
 
-    abort();
-
+    if (data[0] == '{')
+    {
+        *err = MACAROON_NO_JSON_SUPPORT;
+        return NULL;
+    }
+    else if (data[0] == '\x02')
+    {
+        return macaroon_deserialize_v2(data, data_sz, err);
+    }
+    else
+    {
+        *err = MACAROON_INVALID;
+        return NULL;
+    }
 }
 
 MACAROON_API size_t

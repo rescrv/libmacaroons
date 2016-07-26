@@ -35,6 +35,8 @@
 #include "packet.h"
 #include "v1.h"
 
+#pragma GCC diagnostic ignored "-Wcast-qual"
+
 enum encoding
 {
     ENCODING_RAW,
@@ -111,7 +113,7 @@ macaroon_serialize_v1(const struct macaroon* M,
                       char* data, size_t data_sz,
                       enum macaroon_returncode* err)
 {
-    const size_t sz = macaroon_serialize_size_hint(M);
+    const size_t sz = macaroon_serialize_size_hint_v1(M);
     size_t i;
     unsigned char* tmp = NULL;
     unsigned char* ptr = NULL;
