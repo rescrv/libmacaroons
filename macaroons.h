@@ -64,6 +64,9 @@ enum macaroon_returncode
     MACAROON_UNSUPPORTED_FORMAT=2057
 };
 
+const char*
+macaroon_error(enum macaroon_returncode err);
+
 /* Create a new macaroon.
  *  - location/location_sz is a hint to the target's location
  *  - key/key_sz is the key used as a secret for macaroon construction
@@ -183,7 +186,8 @@ macaroon_serialize(const struct macaroon* M,
                    enum macaroon_returncode* err);
 
 struct macaroon*
-macaroon_deserialize(const char* data, enum macaroon_returncode* err);
+macaroon_deserialize(const unsigned char* data, size_t data_sz,
+                     enum macaroon_returncode* err);
 
 /* Human-readable representation *FOR DEBUGGING ONLY* */
 size_t

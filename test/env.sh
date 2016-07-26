@@ -4,3 +4,4 @@ export MACAROONS_VERSION="$3"
 
 export LD_PRELOAD="${MACAROONS_BUILDDIR}/.libs/libmacaroons-shim.so"
 export PYTHONPATH="${MACAROONS_BUILDDIR}"/bindings/python/.libs:${PYTHONPATH}
+export PATH=${MACAROONS_BUILDDIR}:${MACAROONS_SRCDIR}:${PATH}

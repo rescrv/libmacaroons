@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+
+import glob
+import stat
+import os
+
+for x in glob.glob('test/unit/*.vtest'):
+    fname = x + '.sh'
+    f = open(fname, 'w')
+    f.write('''#!/bin/sh
+exec macaroon-test-runner < {0}
+'''.format(x))
+    f.flush()
+    f.close()
+    os.chmod(fname, stat.S_IRWXU)

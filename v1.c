@@ -167,11 +167,10 @@ macaroon_serialize_v1(const struct macaroon* M,
 }
 
 struct macaroon*
-macaroon_deserialize_v1(const char* _data, enum macaroon_returncode* err)
+macaroon_deserialize_v1(const char* _data, const size_t _data_sz, enum macaroon_returncode* err)
 {
     size_t num_pkts = 0;
     struct packet pkt = EMPTY_PACKET;
-    const size_t _data_sz = strlen(_data);
     unsigned char* data = NULL;
     const unsigned char* end = NULL;
     const unsigned char* rptr = NULL;

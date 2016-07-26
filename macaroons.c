@@ -65,6 +65,10 @@
 #error bad constants
 #endif
 
+#define XSTR(x) #x
+#define STR(x) XSTR(x)
+#define STRINGIFY(x) case (x): return XSTR(x);
+
 struct predicate
 {
     const unsigned char* data;
@@ -87,6 +91,26 @@ struct macaroon_verifier
     size_t verifier_callbacks_sz;
     size_t verifier_callbacks_cap;
 };
+
+MACAROON_API const char*
+macaroon_error(enum macaroon_returncode err)
+{
+    switch (err)
+    {
+        STRINGIFY(MACAROON_SUCCESS);
+        STRINGIFY(MACAROON_OUT_OF_MEMORY);
+        STRINGIFY(MACAROON_HASH_FAILED);
+        STRINGIFY(MACAROON_INVALID);
+        STRINGIFY(MACAROON_TOO_MANY_CAVEATS);
+        STRINGIFY(MACAROON_CYCLE);
+        STRINGIFY(MACAROON_BUF_TOO_SMALL);
+        STRINGIFY(MACAROON_NOT_AUTHORIZED);
+        STRINGIFY(MACAROON_NO_JSON_SUPPORT);
+        STRINGIFY(MACAROON_UNSUPPORTED_FORMAT);
+        default:
+            return "unknown error";
+    }
+}
 
 /* Allocate a new macaroon with space for "num_caveats" caveats and a body of
  * "body_data" bytes.  Returns via _ptr a contiguous set of "body_data" bytes to
@@ -944,10 +968,25 @@ macaroon_serialize(const struct macaroon* M,
     return macaroon_serialize_v1(M, data, data_sz, err);
 }
 
+static const char v1_chars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/-_";
+
 MACAROON_API struct macaroon*
-macaroon_deserialize(const char* data, enum macaroon_returncode* err)
+macaroon_deserialize(const unsigned char* data, size_t data_sz,
+                     enum macaroon_returncode* err)
 {
-    return macaroon_deserialize_v1(data, err);
+    if (data_sz == 0)
+    {
+        *err = MACAROON_INVALID;
+        return NULL;
+    }
+
+    if (strchr(v1_chars, data[0]))
+    {
+        return macaroon_deserialize_v1((const char*)data, data_sz, err);
+    }
+
+    abort();
+
 }
 
 MACAROON_API size_t

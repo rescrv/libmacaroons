@@ -1,0 +1,72 @@
+Tests
+-----
+
+The test/unit/ directory of the libmacaroons repo contains several tests of
+the macaroons serialization, deserialization, and verifier.  This document
+describes the format of these language-independent test files so that all
+macaroon implementations may validate themselves against the same tests.
+
+Verification Tests
+------------------
+
+Verification tests test the verifier and for correctness.  Each test is
+contained within a single file that, by convention, ends in ".vtest".  The
+file describes the version of macaroons used by the test, whether the request
+is authorized, the verifier, and the macaroons to be verified.  The test file
+is designed to be easy to parse in a variety of languages.  A simple test
+looks like:
+
+    # a simple test of a macaroon with an exact caveat verified with the correct
+    # root key and verifier
+    version 1
+    authorized
+    key this is the key
+    exact account = 3735928559
+    MDAyMWxvY2F0aW9uIGh0dHA6Ly9leGFtcGxlLm9yZy8KMDAxNWlkZW50aWZpZXIga2V5aWQKMDAxZGNpZCBhY2NvdW50ID0gMzczNTkyODU1OQowMDJmc2lnbmF0dXJlIPVIB_bcbt-Ivw9zBrOCJWKjYlM9v3M5umF2XaS9JZ2HCg
+
+This test will construct a verifier that corresponds to this C code:
+
+    struct macaroon_verifier* V = macaroon_verifier_create();
+    macaroon_verifier_satisfy_exact(V, "account = 3735928559", 20, &err);
+
+and then verify the single macaroon with:
+
+    macaroon_verify(V, M, "this is the key", 15, NULL, 0, &err);
+
+The format of the file is intended to be pretty easy to interpret.  It adheres
+to the following rules (references to the C implementation should be mapped to
+their equivalents in other implementations):
+
+ - Empty lines and lines beginning with a '#' are ignored; the remaining
+   bullets' description of line numbers assume no ignored lines
+ - The first line lists the version(s) the test requires of the
+   implementation.  It starts with the literal "version " and then a
+   space-separated list of version numbers.  A version number ending in "j"
+   indicates JSON format.  Currently-supported versions are "1", "2", "2j".
+ - The second line indicates the outcome of the test.  It must be either
+   "authorized" or "unauthorized"
+ - The third line provides the root secret for the macaroons tree.  The line
+   starts with the literal "key " and then the key itself  up to, but
+   excluding the '\n' that terminates the line.  In the above example, the key
+   would be the literal "this is the key".  The key is provided to the
+   function "macaroon_create" and not "macaroon_create_raw".
+ - The next 0 or more lines are caveats to be added to the verifier.  Caveats
+   starting with the literal "exact " provide a predicate to be passed to the
+   function "macaroon_verifier_satisfy_exact".  As with the key, the
+   predicate is the sequence of characters up to, but excluding the '\n' that
+   terminates the line.  Caveats starting with the literal "general" followed
+   by any C-style identifier refer to a builtin general caveat.  These caveats
+   are functions that match "macaroon_caveat_*" in the libmacaroons
+   implementation, where the wildcard is the identifier specified after the
+   literal "general".
+ - The remaining 1 or more lines are macaroons to be passed to the verifier.
+   The first of these macaroons corresponds to the "M" argument of the
+   "macaroon_verify" function and the remainder comprise the MS argument.
+   Each macaroon is base-64 encoded to avoid having to parse binary data from
+   the test file.  The decoded form of the line corresponds to a macaroon in
+   one of the serialized formats specified in "version".
+
+Serialization Tests
+-------------------
+
+XXX write these and some tests

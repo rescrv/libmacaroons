@@ -72,7 +72,9 @@ EXTRA_DIST += test/python-hmac-sanity-check.sh
 EXTRA_DIST += test/readme.sh
 
 check_LTLIBRARIES = libmacaroons-shim.la
-check_PROGRAMS = test/varint
+check_PROGRAMS =
+check_PROGRAMS += test/varint
+check_PROGRAMS += macaroon-test-runner
 
 libmacaroons_shim_la_SOURCES = shim.c explicit_bzero.c
 libmacaroons_shim_la_LDFLAGS = -module -avoid-version -rpath /evil/libtool/hack/to/force/shared/lib/creation
@@ -86,6 +88,22 @@ TESTS += test/varint
 
 test_varint_SOURCES = test/varint.c varint.c
 test_varint_CFLAGS = $(AM_CFLAGS) $(CFLAGS)
+
+macaroon_test_runner_SOURCES = test/macaroon-test-runner.c base64.c
+macaroon_test_runner_LDADD = libmacaroons.la
+macaroon_test_runner_CFLAGS = $(AM_CFLAGS) $(CFLAGS)
+
+macaroon_unit_test_stubs =
+macaroon_unit_test_stubs += test/unit/caveat_v1_1.vtest.sh
+macaroon_unit_test_stubs += test/unit/caveat_v1_2.vtest.sh
+macaroon_unit_test_stubs += test/unit/caveat_v1_3.vtest.sh
+macaroon_unit_test_stubs += test/unit/root_v1_1.vtest.sh
+macaroon_unit_test_stubs += test/unit/root_v1_2.vtest.sh
+
+TESTS += $(macaroon_unit_test_stubs)
+check_SCRIPTS =
+check_SCRIPTS += $(macaroon_unit_test_stubs)
+
 
 #################################### Python ####################################
 
@@ -111,3 +129,12 @@ bindings_python_macaroons_la_LIBADD += $(PYTHON_LDFLAGS)
 bindings_python_macaroons_la_LDFLAGS = -module -avoid-version -export-symbols-regex $(PYTHON_SYMBOL)macaroons $(AM_LDFLAGS) $(LDFLAGS)
 bindings/python/macaroons.c: bindings/python/macaroons.pyx
 	$(pyx_verbose)cython bindings/python/macaroons.pyx
+
+################################################################################
+################################## Maintenance #################################
+################################################################################
+
+EXTRA_DIST += maint/generate-shell-stubs
+
+maintainer-generate:
+	maint/generate-shell-stubs

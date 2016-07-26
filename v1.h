@@ -47,7 +47,7 @@ macaroon_serialize_v1(const struct macaroon* M,
                       enum macaroon_returncode* err);
 
 struct macaroon*
-macaroon_deserialize_v1(const char* _data, enum macaroon_returncode* err);
+macaroon_deserialize_v1(const char* _data, const size_t sz, enum macaroon_returncode* err);
 
 size_t
 macaroon_inspect_size_hint_v1(const struct macaroon* M);

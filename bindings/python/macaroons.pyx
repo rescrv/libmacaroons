@@ -69,7 +69,7 @@ cdef extern from "macaroons.h":
     void macaroon_signature(const macaroon* M, const unsigned char** signature, size_t* signature_sz)
     size_t macaroon_serialize_size_hint(macaroon* M)
     int macaroon_serialize(macaroon* M, char* data, size_t data_sz, macaroon_returncode* err)
-    macaroon* macaroon_deserialize(char* data, macaroon_returncode* err)
+    macaroon* macaroon_deserialize(unsigned char* data, size_t data_sz, macaroon_returncode* err)
     size_t macaroon_inspect_size_hint(macaroon* M)
     int macaroon_inspect(macaroon* M, char* data, size_t data_sz, macaroon_returncode* err)
     macaroon* macaroon_copy(macaroon* M, macaroon_returncode* err)
@@ -344,7 +344,7 @@ def deserialize(m):
     cdef Macaroon M = Macaroon()
     cdef macaroon_returncode err
     m = tobytes(m)
-    M._M = macaroon_deserialize(m, &err)
+    M._M = macaroon_deserialize(m, len(m), &err)
     if M._M == NULL:
         raise_error(err)
     return M
