@@ -1,2 +1,2 @@
 #!/bin/sh
-exec macaroon-test-serialization < test/unit/serialization_1
+exec macaroon-test-serialization < "${MACAROONS_SRCDIR}/test/unit/serialization_1"

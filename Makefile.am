@@ -38,11 +38,27 @@ pyx_verbose_0 = @echo "  PYX     " $@;
 
 EXTRA_DIST  =
 EXTRA_DIST += README
+EXTRA_DIST += CAVEATS
 EXTRA_DIST += LICENSE
+EXTRA_DIST += doc/format.txt
+EXTRA_DIST += doc/tests.txt
 
 include_HEADERS = macaroons.h
 
-noinst_HEADERS = base64.h constants.h custom-config.h packet.h port.h
+noinst_HEADERS =
+noinst_HEADERS += base64.h
+noinst_HEADERS += constants.h
+noinst_HEADERS += custom-config.h
+noinst_HEADERS += macaroons-inner.h
+noinst_HEADERS += packet.h
+noinst_HEADERS += port.h
+noinst_HEADERS += sha256.h
+noinst_HEADERS += slice.h
+noinst_HEADERS += sysendian.h
+noinst_HEADERS += tweetnacl.h
+noinst_HEADERS += varint.h
+noinst_HEADERS += v1.h
+noinst_HEADERS += v2.h
 
 lib_LTLIBRARIES = libmacaroons.la
 
@@ -123,6 +139,26 @@ macaroon_unit_test_stubs += test/unit/serialization_3.sh
 
 TESTS += $(macaroon_unit_test_stubs)
 check_SCRIPTS += $(macaroon_unit_test_stubs)
+EXTRA_DIST += $(macaroon_unit_test_stubs)
+EXTRA_DIST += test/unit/caveat_v1_1.vtest
+EXTRA_DIST += test/unit/caveat_v1_2.vtest
+EXTRA_DIST += test/unit/caveat_v1_3.vtest
+EXTRA_DIST += test/unit/caveat_v1_4.vtest
+EXTRA_DIST += test/unit/caveat_v1_5.vtest
+EXTRA_DIST += test/unit/caveat_v1_6.vtest
+EXTRA_DIST += test/unit/caveat_v2_1.vtest
+EXTRA_DIST += test/unit/caveat_v2_2.vtest
+EXTRA_DIST += test/unit/caveat_v2_3.vtest
+EXTRA_DIST += test/unit/caveat_v2_4.vtest
+EXTRA_DIST += test/unit/caveat_v2_5.vtest
+EXTRA_DIST += test/unit/caveat_v2_6.vtest
+EXTRA_DIST += test/unit/root_v1_1.vtest
+EXTRA_DIST += test/unit/root_v1_2.vtest
+EXTRA_DIST += test/unit/root_v2_1.vtest
+EXTRA_DIST += test/unit/root_v2_2.vtest
+EXTRA_DIST += test/unit/serialization_1
+EXTRA_DIST += test/unit/serialization_2
+EXTRA_DIST += test/unit/serialization_3
 
 #################################### Python ####################################
 

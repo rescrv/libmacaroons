@@ -8,17 +8,18 @@ for x in glob.glob('test/unit/*.vtest'):
     fname = x + '.sh'
     f = open(fname, 'w')
     f.write('''#!/bin/sh
-exec macaroon-test-verifier < {0}
+exec macaroon-test-verifier < "${{MACAROONS_SRCDIR}}/{0}"
 '''.format(x))
     f.flush()
     f.close()
     os.chmod(fname, stat.S_IRWXU)
 
 for x in glob.glob('test/unit/serialization*'):
+    if x.endswith('.sh'): continue
     fname = x + '.sh'
     f = open(fname, 'w')
     f.write('''#!/bin/sh
-exec macaroon-test-serialization < {0}
+exec macaroon-test-serialization < "${{MACAROONS_SRCDIR}}/{0}"
 '''.format(x))
     f.flush()
     f.close()

@@ -1,2 +1,2 @@
 #!/bin/sh
-exec macaroon-test-verifier < test/unit/caveat_v1_6.vtest
+exec macaroon-test-verifier < "${MACAROONS_SRCDIR}/test/unit/caveat_v1_6.vtest"
