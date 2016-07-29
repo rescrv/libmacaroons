@@ -202,7 +202,7 @@ change with each of them.
     signature ddf553e46083e55b8d71ab822be3d8fcf21d6bf19c40d617bb9fb438934474b6
 
 The combination of all caveats in this macaroon authorize alice@example.org to
-access account 3735928559 until the end of 2014.  Alice may present this
+access account 3735928559 until the end of 2019.  Alice may present this
 macaroon to the bank any time she wishes to prove to the bank that she is
 authorized to access her account.  Ideally, she'll transmit the serialized form
 of the macaroon to the bank:
