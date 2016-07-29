@@ -126,8 +126,9 @@ void
 macaroon_bin2hex(const unsigned char* bin, size_t bin_sz, char* hex)
 {
     static const char hexes[] = "0123456789abcdef";
+    size_t i;
 
-    for (size_t i = 0; i < bin_sz; ++i)
+    for (i = 0; i < bin_sz; ++i)
     {
         hex[2 * i + 0] = hexes[(bin[i] >> 4) & 0xfu];
         hex[2 * i + 1] = hexes[bin[i] & 0xfU];

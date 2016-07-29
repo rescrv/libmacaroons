@@ -35,8 +35,9 @@ unpackvarint(const unsigned char* ptr,
              uint64_t* value)
 {
     uint64_t result = 0;
+    unsigned int shift;
 
-    for (unsigned shift = 0; shift <= 63 && ptr < end; shift += 7)
+    for (shift = 0; shift <= 63 && ptr < end; shift += 7)
     {
         uint64_t byte = *ptr & 0xff;
         ptr++;
