@@ -62,12 +62,13 @@ optional_field_size(const struct slice* f)
 size_t
 macaroon_serialize_size_hint_v2(const struct macaroon* M)
 {
+    size_t i;
     size_t sz = 4 /* 1 for version, 3 for 3 EOS markers */
               + optional_field_size(&M->location)
               + required_field_size(&M->identifier)
               + required_field_size(&M->signature);
 
-    for (size_t i = 0; i < M->num_caveats; ++i)
+    for (i = 0; i < M->num_caveats; ++i)
     {
         sz += optional_field_size(&M->caveats[i].cl);
         sz += required_field_size(&M->caveats[i].cid);
@@ -117,6 +118,7 @@ macaroon_serialize_v2(const struct macaroon* M,
 {
     unsigned char* ptr = data;
     unsigned char* const end = ptr + data_sz;
+    size_t i;
     if (ptr >= end) goto emit_buf_too_small;
     *ptr = 2;
     ++ptr;
@@ -124,7 +126,7 @@ macaroon_serialize_v2(const struct macaroon* M,
     if (emit_required_field(TYPE_IDENTIFIER, &M->identifier, &ptr, end) < 0) goto emit_buf_too_small;
     if (emit_eos(&ptr, end) < 0) goto emit_buf_too_small;
 
-    for (size_t i = 0; i < M->num_caveats; ++i)
+    for (i = 0; i < M->num_caveats; ++i)
     {
         const struct caveat* C = &M->caveats[i];
         if (emit_optional_field(TYPE_LOCATION, &C->cl, &ptr, end) < 0) goto emit_buf_too_small;
@@ -221,6 +223,7 @@ macaroon_deserialize_v2(const unsigned char* data, size_t data_sz,
                         enum macaroon_returncode* err)
 {
     const unsigned char* const end = data + data_sz;
+    size_t i;
 
     if (data >= end || *data != 2)
     {
@@ -286,7 +289,7 @@ macaroon_deserialize_v2(const unsigned char* data, size_t data_sz,
     ptr = copy_slice(&signature.data, &M->signature, ptr);
     M->num_caveats = caveats_sz;
 
-    for (size_t i = 0; i < caveats_sz; ++i)
+    for (i = 0; i < caveats_sz; ++i)
     {
         ptr = copy_slice(&caveats[i].cid, &M->caveats[i].cid, ptr);
         ptr = copy_slice(&caveats[i].vid, &M->caveats[i].vid, ptr);
