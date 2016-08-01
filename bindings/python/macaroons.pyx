@@ -78,10 +78,10 @@ cdef extern from "macaroons.h":
         MACAROON_V2J
     cdef macaroon_format MACAROON_LATEST
     cdef macaroon_format MACAROON_LATEST_JSON
-    size_t macaroon_serialize_size_hint(const macaroon* M, macaroon_format f);
+    size_t macaroon_serialize_size_hint(const macaroon* M, macaroon_format f)
     size_t macaroon_serialize(const macaroon* M, macaroon_format f,
                               char* buf, size_t buf_sz,
-                              macaroon_returncode* err);
+                              macaroon_returncode* err)
     macaroon* macaroon_deserialize(unsigned char* data, size_t data_sz, macaroon_returncode* err)
 
 

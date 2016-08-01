@@ -51,6 +51,8 @@ main(int argc, const char* argv[])
     size_t line_sz = 0;
     struct parsed_macaroon* macaroons = NULL;
     size_t macaroons_sz = 0;
+    size_t i;
+    size_t j;
 
     while (1)
     {
@@ -143,9 +145,9 @@ main(int argc, const char* argv[])
 
     int ret = EXIT_SUCCESS;
 
-    for (size_t i = 0; i < macaroons_sz; ++i)
+    for (i = 0; i < macaroons_sz; ++i)
     {
-        for (size_t j = i + 1; j < macaroons_sz; ++j)
+        for (j = i + 1; j < macaroons_sz; ++j)
         {
             if (macaroon_cmp(macaroons[i].M, macaroons[j].M) != 0)
             {

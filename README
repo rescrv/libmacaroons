@@ -81,7 +81,10 @@ This library makes it easy to get started with using macaroons in your
 service.  To use the library you must first install it.  You'll need to
 somehow install libbsd[2].  It's packaged in some Linux distributions, and can
 be installed from source on most *NIX platforms.  Once you have libbsd
-installed, installing macaroons is straight forward:
+installed, installing macaroons is straight forward.  If you're installing
+from git you'll need to install autoconf, automake, libtool, and
+autoconf-archive and execute the first command.  if you're installing from a
+release tarball, you should skip the first command and start with configure.
 
     $ autoreconf -i # only when installing from Git
     $ ./configure --enable-python-bindings

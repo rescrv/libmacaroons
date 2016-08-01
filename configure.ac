@@ -29,10 +29,18 @@ AC_CHECK_FUNC([strlcpy],[BSDLIB=],[BSDLIB=-lbsd])
 AC_SUBST([BSDLIBS], [$BSDLIB])
 
 # Checks for header files.
-AC_CHECK_HEADER([libutil.h],[AC_DEFINE([HAVE_LIBUTIL_H],[1],[Define to 1 if you have the <libutil.h> header file.])],,)
+need_libbsd=yes
+AC_CHECK_HEADER([libutil.h],[need_libbsd=no; AC_DEFINE([HAVE_LIBUTIL_H],[1],[Define to 1 if you have the <libutil.h> header file.])],,)
 AC_CHECK_HEADER([bsd/stdlib.h],[AC_DEFINE([HAVE_BSD_STDLIB_H],[1],[Define to 1 if you have the <bsd/stdlib.h> header file.])],,)
 AC_CHECK_HEADER([bsd/libutil.h],[AC_DEFINE([HAVE_BSD_LIBUTIL_H],[1],[Define to 1 if you have the <bsd/libutil.h> header file.])],,)
-AC_CHECK_HEADER([util.h],[AC_DEFINE([HAVE_OSX_LIBUTIL_H],[1],[Define to 1 if you have the <util.h> header file.])],,)
+AC_CHECK_HEADER([util.h],[need_libbsd=no; AC_DEFINE([HAVE_OSX_LIBUTIL_H],[1],[Define to 1 if you have the <util.h> header file.])],,)
+
+AS_IF([test "x${need_libbsd}" = xyes],
+      [AC_CHECK_LIB([bsd],[strlcat],,[AC_MSG_ERROR([
+-------------------------------------------------
+libmacaroons relies upon the libbsd library.
+Please install libbsd to continue.
+-------------------------------------------------])],)],)
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T

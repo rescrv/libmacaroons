@@ -47,11 +47,12 @@ varint_verify(uint64_t value, const char* representation)
     assert(sz % 2 == 0);
     unsigned char buf[VARINT_MAX_SIZE];
     uint64_t eulav;
+    unsigned int i;
     assert(packvarint(value, buf) == buf + sz / 2);
     assert(unpackvarint(buf, buf + VARINT_MAX_SIZE, &eulav) == buf + sz / 2);
     assert(value == eulav);
 
-    for (unsigned i = 0; i < sz / 2; ++i)
+    for (i = 0; i < sz / 2; ++i)
     {
         char hex[3];
         snprintf(hex, 3, "%02x", buf[i] & 0xff);
