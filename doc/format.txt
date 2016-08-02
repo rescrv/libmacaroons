@@ -42,7 +42,7 @@ The grammar is as follows, in YACC-like syntax:
 macaroon: VERSION opt_location IDENTIFIER EOS caveats EOS SIGNATURE
 
 caveats: caveat caveats
-       | EOS
+       |
 
 caveat: opt_location IDENTIFIER opt_vid EOS
 

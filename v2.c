@@ -136,7 +136,6 @@ macaroon_serialize_v2(const struct macaroon* M,
     }
 
     if (emit_eos(&ptr, end) < 0) goto emit_buf_too_small;
-    if (emit_eos(&ptr, end) < 0) goto emit_buf_too_small;
     if (emit_required_field(TYPE_SIGNATURE, &M->signature, &ptr, end) < 0) goto emit_buf_too_small;
     return ptr - data;
 
@@ -269,7 +268,6 @@ macaroon_deserialize_v2(const unsigned char* data, size_t data_sz,
         body_sz += cid.data.size + vid.data.size + cl.data.size;
     }
 
-    if (parse_eos(&data, end) < 0) goto parse_invalid;
     if (parse_eos(&data, end) < 0) goto parse_invalid;
     struct field signature;
     if (parse_required_field(&data, end, TYPE_SIGNATURE, &signature) < 0) goto parse_invalid;
