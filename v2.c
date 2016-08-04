@@ -33,6 +33,7 @@
 
 /* macaroons */
 #include "v2.h"
+#include "constants.h"
 #include "varint.h"
 
 #define TYPE_LOCATION 1
@@ -40,6 +41,10 @@
 #define TYPE_VID 4
 #define TYPE_SIGNATURE 6
 #define EOS 0
+
+#define ENC_STR 1
+#define ENC_HEX 2
+#define ENC_B64 3
 
 struct field
 {
@@ -306,4 +311,243 @@ parse_error:
     }
 
     return NULL;
+}
+
+#define JSON_START "{\"v\":2"
+#define JSON_CAVEATS_START ",\"c\":["
+#define JSON_CAVEATS_FINISH "],"
+
+#define JSON_MAX_FIELD_SIZE 1
+
+const char*
+json_field_type(uint8_t type)
+{
+    /* If you elongate these strings, update JSON_MAX_FIELD_SIZE */
+    switch (type)
+    {
+        case TYPE_LOCATION:
+            return "l";
+        case TYPE_IDENTIFIER:
+            return "i";
+        case TYPE_VID:
+            return "v";
+        case TYPE_SIGNATURE:
+            return "s";
+        default:
+            return NULL;
+    }
+}
+
+size_t
+json_required_field_size(int encoding, const struct slice* f)
+{
+    switch (encoding)
+    {
+        case ENC_STR:
+            return 6 + JSON_MAX_FIELD_SIZE + f->size;
+        case ENC_HEX:
+            return 6 + JSON_MAX_FIELD_SIZE + 2 * f->size;
+        case ENC_B64:
+            return 6 + JSON_MAX_FIELD_SIZE + (8 * f->size + 7) / 6;
+        default:
+            abort();
+    }
+}
+
+size_t
+json_optional_field_size(int encoding, const struct slice* f)
+{
+    return f->size ? json_required_field_size(encoding, f) : 0;
+}
+
+size_t
+macaroon_serialize_size_hint_v2j(const struct macaroon* M)
+{
+    size_t i;
+    size_t sz = STRLENOF(JSON_START)
+              + STRLENOF(JSON_CAVEATS_START)
+              + STRLENOF(JSON_CAVEATS_FINISH)
+              + 1 /* finishing */
+              + json_optional_field_size(ENC_STR, &M->location)
+              + json_required_field_size(ENC_STR, &M->identifier)
+              + json_required_field_size(ENC_B64, &M->signature);
+
+    for (i = 0; i < M->num_caveats; ++i)
+    {
+        sz += 3; /* ,{} */
+        sz += json_optional_field_size(ENC_STR, &M->caveats[i].cl);
+        sz += json_required_field_size(ENC_STR, &M->caveats[i].cid);
+        sz += json_optional_field_size(ENC_STR, &M->caveats[i].vid);
+    }
+
+    return sz;
+}
+
+void
+json_emit_char(unsigned char c,
+               unsigned char** ptr,
+               unsigned char* const end)
+{
+    assert(*ptr < end);
+    **ptr = c;
+    ++*ptr;
+}
+
+int
+json_emit_string(const char* str, size_t str_sz,
+                 unsigned char** ptr,
+                 unsigned char* const end)
+{
+    if (*ptr + str_sz + 2 > end) return -1;
+    json_emit_char('"', ptr, end);
+    memmove(*ptr, str, str_sz);
+    *ptr += str_sz;
+    json_emit_char('"', ptr, end);
+    return 0;
+}
+
+int
+json_emit_string_b64(const char* str, size_t str_sz,
+                     unsigned char** ptr,
+                     unsigned char* const end)
+{
+    const size_t b64_sz = (str_sz * 8 + 7) / 6;
+    if (*ptr + b64_sz + 2 > end) return -1;
+    json_emit_char('"', ptr, end);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpointer-sign"
+    int ret = b64_ntop(str, str_sz, *ptr, end - *ptr);
+    if (ret < 0) return -1;
+    *ptr += ret;
+#pragma GCC diagnostic pop
+    json_emit_char('"', ptr, end);
+    return 0;
+}
+
+int
+json_emit_encoded_string(int encoding,
+                         const char* str, size_t str_sz,
+                         unsigned char** ptr,
+                         unsigned char* const end)
+{
+    switch (encoding)
+    {
+        case ENC_STR:
+            /* XXX check that it is UTF-8 and switch to other case if not */
+            /* XXX if the above XXX is addressed, remember to adjust sz hint */
+            return json_emit_string(str, str_sz, ptr, end);
+        case ENC_B64:
+            return json_emit_string_b64(str, str_sz, ptr, end);
+        case ENC_HEX:
+        default:
+            return -1;
+    }
+}
+
+int
+json_emit_required_field(int comma, int encoding, uint8_t _type,
+                         const struct slice* f,
+                         unsigned char** ptr,
+                         unsigned char* const end)
+{
+    const char* type = json_field_type(_type);
+    assert(type);
+    const size_t type_sz = strlen(type);
+    const size_t sz = 6/*quote field + quote value + colon + comma */
+                    + type_sz + f->size;
+    if (*ptr + sz > end) return -1;
+    if (comma) json_emit_char(',', ptr, end);
+    if (json_emit_string(type, type_sz, ptr, end) < 0) return -1;
+    json_emit_char(':', ptr, end);
+    if (json_emit_encoded_string(encoding, (const char*)f->data, f->size, ptr, end) < 0) return -1;
+    assert(*ptr <= end);
+    return 0;
+}
+
+int
+json_emit_optional_field(int comma, int encoding, uint8_t type,
+                         const struct slice* f,
+                         unsigned char** ptr,
+                         unsigned char* const end)
+{
+    return f->size ? json_emit_required_field(comma, encoding, type, f, ptr, end) : 0;
+}
+
+int
+json_emit_start(unsigned char** ptr,
+                unsigned char* const end)
+{
+    const size_t sz = STRLENOF(JSON_START);
+    if (*ptr + sz > end) return -1;
+    memmove(*ptr, JSON_START, sz);
+    *ptr += sz;
+    return 0;
+}
+
+int
+json_emit_finish(unsigned char** ptr,
+                 unsigned char* const end)
+{
+    if (*ptr >= end) return -1;
+    json_emit_char('}', ptr, end);
+    return 0;
+}
+
+int
+json_emit_caveats_start(unsigned char** ptr,
+                        unsigned char* const end)
+{
+    const size_t sz = STRLENOF(JSON_CAVEATS_START);
+    if (*ptr + sz > end) return -1;
+    memmove(*ptr, JSON_CAVEATS_START, sz);
+    *ptr += sz;
+    return 0;
+}
+
+int
+json_emit_caveats_finish(unsigned char** ptr,
+                         unsigned char* const end)
+{
+    const size_t sz = STRLENOF(JSON_CAVEATS_FINISH);
+    if (*ptr + sz > end) return -1;
+    memmove(*ptr, JSON_CAVEATS_FINISH, sz);
+    *ptr += sz;
+    return 0;
+}
+
+size_t
+macaroon_serialize_v2j(const struct macaroon* M,
+                       unsigned char* data, size_t data_sz,
+                       enum macaroon_returncode* err)
+{
+    unsigned char* ptr = data;
+    unsigned char* const end = ptr + data_sz;
+    size_t i;
+    if (ptr >= end) goto json_emit_buf_too_small;
+    if (json_emit_start(&ptr, end) < 0) goto json_emit_buf_too_small;
+    if (json_emit_optional_field(1, ENC_STR, TYPE_LOCATION, &M->location, &ptr, end) < 0) goto json_emit_buf_too_small;
+    if (json_emit_required_field(1, ENC_STR, TYPE_IDENTIFIER, &M->identifier, &ptr, end) < 0) goto json_emit_buf_too_small;
+    if (json_emit_caveats_start(&ptr, end) < 0) goto json_emit_buf_too_small;
+
+    for (i = 0; i < M->num_caveats; ++i)
+    {
+        const struct caveat* C = &M->caveats[i];
+        if (ptr + 3 >= end) goto json_emit_buf_too_small;
+        if (i > 0) json_emit_char(',', &ptr, end);
+        json_emit_char('{', &ptr, end);
+        if (json_emit_required_field(0, ENC_STR, TYPE_IDENTIFIER, &C->cid, &ptr, end) < 0) goto json_emit_buf_too_small;
+        if (json_emit_optional_field(1, ENC_STR, TYPE_LOCATION, &C->cl, &ptr, end) < 0) goto json_emit_buf_too_small;
+        if (json_emit_optional_field(1, ENC_STR, TYPE_VID, &C->vid, &ptr, end) < 0) goto json_emit_buf_too_small;
+        if (ptr >= end) goto json_emit_buf_too_small;
+        json_emit_char('}', &ptr, end);
+    }
+
+    if (json_emit_caveats_finish(&ptr, end) < 0) goto json_emit_buf_too_small;
+    if (json_emit_required_field(0, ENC_B64, TYPE_SIGNATURE, &M->signature, &ptr, end) < 0) goto json_emit_buf_too_small;
+    if (json_emit_finish(&ptr, end) < 0) goto json_emit_buf_too_small;
+    return ptr - data;
+
+json_emit_buf_too_small:
+    *err = MACAROON_BUF_TOO_SMALL;
+    return 0;
 }

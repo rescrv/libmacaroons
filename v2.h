@@ -50,4 +50,16 @@ struct macaroon*
 macaroon_deserialize_v2(const unsigned char* data, size_t data_sz,
                         enum macaroon_returncode* err);
 
+size_t
+macaroon_serialize_size_hint_v2j(const struct macaroon* M);
+
+size_t
+macaroon_serialize_v2j(const struct macaroon* M,
+                       unsigned char* data, size_t data_sz,
+                       enum macaroon_returncode* err);
+
+struct macaroon*
+macaroon_deserialize_v2j(const unsigned char* data, size_t data_sz,
+                         enum macaroon_returncode* err);
+
 #endif /* macaroons_v2_h_ */

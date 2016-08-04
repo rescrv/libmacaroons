@@ -965,6 +965,8 @@ macaroon_serialize_size_hint(const struct macaroon* M,
             return macaroon_serialize_size_hint_v1(M);
         case MACAROON_V2:
             return macaroon_serialize_size_hint_v2(M);
+        case MACAROON_V2J:
+            return macaroon_serialize_size_hint_v2j(M);
         default:
             return 0;
     }
@@ -983,6 +985,8 @@ macaroon_serialize(const struct macaroon* M,
             return strlen((char*)buf);
         case MACAROON_V2:
             return macaroon_serialize_v2(M, buf, buf_sz, err);
+        case MACAROON_V2J:
+            return macaroon_serialize_v2j(M, buf, buf_sz, err);
         default:
             return 0;
     }

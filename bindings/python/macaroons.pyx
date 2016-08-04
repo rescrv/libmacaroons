@@ -172,9 +172,13 @@ cdef class Macaroon:
             data = <char*>malloc(sizeof(unsigned char) * data_sz)
             if data == NULL:
                 raise MemoryError
-            if macaroon_serialize(self._M, f, data, data_sz, &err) < 0:
+            data_sz = macaroon_serialize(self._M, f, data, data_sz, &err)
+            if data_sz == 0:
                 raise_error(err)
-            return bytes(data)
+            if self.is_json(format):
+                return bytes(data[:data_sz]).decode('utf8')
+            else:
+                return bytes(data[:data_sz])
         finally:
             if data != NULL:
                 free(data)
@@ -271,6 +275,16 @@ cdef class Macaroon:
                                   1: MACAROON_V1,
                                   '1': MACAROON_V1}[v]
         return f
+
+    cdef is_json(self, v):
+        return {'latest': False,
+                'binary': False,
+                'json': True,
+                '2j': True,
+                2: False,
+                '2': False,
+                1: False,
+                '1': False}[v]
 
 
 cdef int general_cb(void* f, const unsigned char* pred, size_t pred_sz):

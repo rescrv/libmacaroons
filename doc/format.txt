@@ -111,7 +111,7 @@ this should be the string "2".
 
 `c` (array): A JSON array an object for each caveat.
 
-`s` (data): The signature (must encode to exactly 32 bytes)
+`s` (data): The signature (must decode to exactly 32 bytes)
 
 Each caveat is an object holding the following fields:
 
