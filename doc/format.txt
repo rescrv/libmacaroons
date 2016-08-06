@@ -73,14 +73,13 @@ The initial version specified in this document is "2", indicating the major
 version.
 
 To handle binary data, other fields may be encoded as hexadecimal, base64 or
-UTF-8. If a field is named *x* below, it may be specified in hex with the name
-*x*H, or base64 with the name *x*64.  The hex format should allow both upper
-and lower case digits; the base64 format should allow both URL-safe and
-standard base64 encodings with optional "=" pad characters. The UTF-8 format
-can be used when the field contains a valid sequence of UTF-8 bytes that can
-be encoded without loss as a JSON string. In this case the JSON string should
-be interpreted as a sequence of UTF-8 bytes after decoding for the purposes of
-signature calculation.
+UTF-8. If a field is named *x* below, it may be specified in base64 with the
+name *x*64.  The hex format should allow both upper and lower case digits; the
+base64 format should allow both URL-safe and standard base64 encodings with
+optional "=" pad characters. The UTF-8 format can be used when the field
+contains a valid sequence of UTF-8 bytes that can be encoded without loss as a
+JSON string. In this case the JSON string should be interpreted as a sequence
+of UTF-8 bytes after decoding for the purposes of signature calculation.
 
 Implementations should reject JSON objects containing more than one
 representation of the same field.
@@ -88,9 +87,6 @@ representation of the same field.
 For example, all the following objects encode a caveat with the same id:
 
     {"i": "Ou?T"}
-    {"iH": "4f753f54"}
-    {"iH": "4F753F54"}
-    {"iH": "4f753F54"}
     {"i64": "T3U/VA=="}
     {"i64": "T3U_VA=="}
     {"i64": "T3U/VA"}
@@ -98,7 +94,7 @@ For example, all the following objects encode a caveat with the same id:
 
 The following object is an invalid caveat:
 
-    {"i": "foo", "iH": "666f6f"}
+    {"i": "foo", "i64": "Zm9v"}
 
 The JSON object fields as are follows.
 

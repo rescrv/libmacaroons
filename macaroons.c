@@ -1011,8 +1011,7 @@ macaroon_deserialize(const unsigned char* data, size_t data_sz,
 
     if (data[0] == '{')
     {
-        *err = MACAROON_NO_JSON_SUPPORT;
-        return NULL;
+        return macaroon_deserialize_v2j(data, data_sz, err);
     }
     else if (data[0] == '\x02')
     {

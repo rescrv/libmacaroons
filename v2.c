@@ -28,11 +28,13 @@
 
 /* C */
 #include <assert.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <string.h>
 
 /* macaroons */
 #include "v2.h"
+#include "base64.h"
 #include "constants.h"
 #include "varint.h"
 
@@ -43,8 +45,7 @@
 #define EOS 0
 
 #define ENC_STR 1
-#define ENC_HEX 2
-#define ENC_B64 3
+#define ENC_B64 2
 
 struct field
 {
@@ -317,6 +318,7 @@ parse_error:
 #define JSON_CAVEATS_START ",\"c\":["
 #define JSON_CAVEATS_FINISH "],"
 
+/* size prior to 64 suffix */
 #define JSON_MAX_FIELD_SIZE 1
 
 const char*
@@ -338,6 +340,39 @@ json_field_type(uint8_t type)
     }
 }
 
+const char*
+json_field_type_b64(uint8_t type)
+{
+    /* If you elongate these strings, update JSON_MAX_FIELD_SIZE */
+    switch (type)
+    {
+        case TYPE_LOCATION:
+            return "l64";
+        case TYPE_IDENTIFIER:
+            return "i64";
+        case TYPE_VID:
+            return "v64";
+        case TYPE_SIGNATURE:
+            return "s64";
+        default:
+            return NULL;
+    }
+}
+
+const char*
+json_field_type_encoded(uint8_t type, int encoding)
+{
+    switch (encoding)
+    {
+        case ENC_STR:
+            return json_field_type(type);
+        case ENC_B64:
+            return json_field_type_b64(type);
+        default:
+            return NULL;
+    }
+}
+
 size_t
 json_required_field_size(int encoding, const struct slice* f)
 {
@@ -345,10 +380,8 @@ json_required_field_size(int encoding, const struct slice* f)
     {
         case ENC_STR:
             return 6 + JSON_MAX_FIELD_SIZE + f->size;
-        case ENC_HEX:
-            return 6 + JSON_MAX_FIELD_SIZE + 2 * f->size;
         case ENC_B64:
-            return 6 + JSON_MAX_FIELD_SIZE + (8 * f->size + 7) / 6;
+            return 6 + JSON_MAX_FIELD_SIZE + 2 + (8 * f->size + 7) / 6;
         default:
             abort();
     }
@@ -438,7 +471,6 @@ json_emit_encoded_string(int encoding,
             return json_emit_string(str, str_sz, ptr, end);
         case ENC_B64:
             return json_emit_string_b64(str, str_sz, ptr, end);
-        case ENC_HEX:
         default:
             return -1;
     }
@@ -450,7 +482,7 @@ json_emit_required_field(int comma, int encoding, uint8_t _type,
                          unsigned char** ptr,
                          unsigned char* const end)
 {
-    const char* type = json_field_type(_type);
+    const char* type = json_field_type_encoded(_type, encoding);
     assert(type);
     const size_t type_sz = strlen(type);
     const size_t sz = 6/*quote field + quote value + colon + comma */
@@ -550,4 +582,467 @@ macaroon_serialize_v2j(const struct macaroon* M,
 json_emit_buf_too_small:
     *err = MACAROON_BUF_TOO_SMALL;
     return 0;
+}
+
+/* all but the top level parsing function only changes "err" if it's not
+ * MACAROON_INVALID; it's assumed to already equal that.
+ */
+
+void
+j2b_skip_whitespace(char** ptr, char* end)
+{
+    while (*ptr < end)
+    {
+        if (!isspace(**ptr))
+        {
+            break;
+        }
+
+        ++*ptr;
+    }
+}
+
+int
+j2b_string(char** ptr, char* end,
+           enum macaroon_returncode* err, struct slice* s)
+{
+    *err = MACAROON_INVALID;
+    assert(*ptr < end);
+    assert(**ptr == '"');
+    ++*ptr;
+    s->data = (const unsigned char*)*ptr;
+
+    while (*ptr < end)
+    {
+        if (**ptr == '\\')
+        {
+            if (*ptr + 1 >= end)
+            {
+                return -1;
+            }
+
+            if ((*ptr)[1] == 'u')
+            {
+                if (*ptr + 6 >= end)
+                {
+                    return -1;
+                }
+
+                *ptr += 6;
+            }
+            else
+            {
+                *ptr += 2;
+            }
+        }
+        else if (**ptr == '"')
+        {
+            break;
+        }
+        else
+        {
+            ++*ptr;
+        }
+    }
+
+    if (*ptr >= end)
+    {
+        return -1;
+    }
+
+    **ptr = '\0';
+    s->size = (const unsigned char*)*ptr - s->data;
+    ++*ptr;
+    return 0;
+}
+
+int
+j2b_b64_decode(struct slice* s)
+{
+    int ret;
+    unsigned char* tmp = malloc(s->size);
+    if (!tmp) return -1;
+    ret = b64_pton((const char*)s->data, tmp, s->size);
+
+    if (ret >= 0)
+    {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+        memmove((unsigned char*)s->data, tmp, ret);
+#pragma GCC diagnostic pop
+        s->size = ret;
+        ret = 0;
+    }
+    else
+    {
+        ret = -1;
+    }
+
+    free(tmp);
+    return ret;
+}
+
+int
+j2b_caveat(char** ptr, char* end, enum macaroon_returncode* err, struct caveat* caveat)
+{
+    struct slice s = EMPTY_SLICE;
+    struct slice cl = EMPTY_SLICE;
+    struct slice cid = EMPTY_SLICE;
+    struct slice vid = EMPTY_SLICE;
+    int seen_cl = 0;
+    int seen_cid = 0;
+    int seen_vid = 0;
+
+    if (*ptr >= end) return -1;
+    if (**ptr != '{') return -1;
+    ++*ptr;
+    int first = 1;
+
+    while (*ptr < end)
+    {
+        j2b_skip_whitespace(ptr, end);
+
+        if (*ptr < end && **ptr == '}')
+        {
+            break;
+        }
+
+        if (!first)
+        {
+            if (*ptr >= end || **ptr != ',') return -1;
+            ++*ptr;
+        }
+
+        first = 0;
+        j2b_skip_whitespace(ptr, end);
+
+        if (*ptr >= end || **ptr != '"' ||
+            j2b_string(ptr, end, err, &s) < 0)
+        {
+            return -1;
+        }
+
+        j2b_skip_whitespace(ptr, end);
+        if (*ptr >= end || **ptr != ':') return -1;
+        ++*ptr;
+        j2b_skip_whitespace(ptr, end);
+
+        if (s.size == 1 && memcmp("i", s.data, s.size) == 0)
+        {
+            if (seen_cid) return -1;
+            if (j2b_string(ptr, end, err, &cid) < 0) return -1;
+            seen_cid = 1;
+        }
+        else if (s.size == 1 && memcmp("l", s.data, s.size) == 0)
+        {
+            if (seen_cl) return -1;
+            if (j2b_string(ptr, end, err, &cl) < 0) return -1;
+            seen_cl = 1;
+        }
+        else if (s.size == 1 && memcmp("v", s.data, s.size) == 0)
+        {
+            if (seen_vid) return -1;
+            if (j2b_string(ptr, end, err, &vid) < 0) return -1;
+            seen_vid = 1;
+        }
+        else if (s.size == 3 && memcmp("i64", s.data, s.size) == 0)
+        {
+            if (seen_cid) return -1;
+            if (j2b_string(ptr, end, err, &cid) < 0) return -1;
+            seen_cid = 1;
+
+            if (j2b_b64_decode(&cid) < 0)
+            {
+                *err = MACAROON_OUT_OF_MEMORY;
+                return -1;
+            }
+        }
+        else if (s.size == 3 && memcmp("l64", s.data, s.size) == 0)
+        {
+            if (seen_cl) return -1;
+            if (j2b_string(ptr, end, err, &cl) < 0) return -1;
+            seen_cl = 1;
+
+            if (j2b_b64_decode(&cl) < 0)
+            {
+                *err = MACAROON_OUT_OF_MEMORY;
+                return -1;
+            }
+        }
+        else if (s.size == 3 && memcmp("v64", s.data, s.size) == 0)
+        {
+            if (seen_vid) return -1;
+            if (j2b_string(ptr, end, err, &vid) < 0) return -1;
+            seen_vid = 1;
+
+            if (j2b_b64_decode(&vid) < 0)
+            {
+                *err = MACAROON_OUT_OF_MEMORY;
+                return -1;
+            }
+        }
+        else
+        {
+            return -1;
+        }
+    }
+
+    if (*ptr >= end) return -1;
+    ++*ptr;
+    if (!seen_cid) return -1;
+    caveat->cid = cid;
+    caveat->vid = vid;
+    caveat->cl = cl;
+    return 0;
+}
+
+int
+j2b_caveats(char** ptr, char* end, enum macaroon_returncode* err,
+            struct caveat** caveats, size_t* caveats_sz)
+{
+    struct caveat* tmp = NULL;
+    size_t caveats_cap = 4;
+    *caveats_sz = 0;
+    *caveats = malloc(sizeof(struct caveat) * caveats_cap);
+
+    if (!*caveats)
+    {
+        *err = MACAROON_OUT_OF_MEMORY;
+        return -1;
+    }
+
+    if (*ptr >= end || **ptr != '[') return -1;
+    ++*ptr;
+    j2b_skip_whitespace(ptr, end);
+
+    while (*ptr < end)
+    {
+        if (**ptr == ']') break;
+
+        if (*caveats_sz == caveats_cap)
+        {
+            caveats_cap = caveats_cap + (caveats_cap >> 1);
+            tmp = realloc(*caveats, sizeof(struct caveat) * caveats_cap);
+
+            if (!tmp)
+            {
+                *err = MACAROON_OUT_OF_MEMORY;
+                return -1;
+            }
+
+            *caveats = tmp;
+        }
+
+        if (j2b_caveat(ptr, end, err, *caveats + *caveats_sz) < 0) return -1;
+        ++*caveats_sz;
+        j2b_skip_whitespace(ptr, end);
+        if (*ptr >= end) return -1;
+
+        if (**ptr == ',')
+        {
+            ++*ptr;
+            j2b_skip_whitespace(ptr, end);
+        }
+        else  if (**ptr != ']')
+        {
+            return -1;;
+        }
+    }
+
+    if (*ptr >= end) return -1;
+    ++*ptr;
+    return 0;
+}
+
+struct macaroon*
+j2b_macaroon(char** ptr, char* end,
+             enum macaroon_returncode* err)
+{
+    struct macaroon* M = NULL;
+    struct slice s;
+    struct slice location;
+    struct slice identifier;
+    struct slice signature;
+    int seen_location = 0;
+    int seen_identifier = 0;
+    int seen_signature = 0;
+    int seen_caveats = 0;
+    /* allocated by j2b_caveats */
+    struct caveat* caveats = NULL;
+    size_t caveats_sz = 0;
+    size_t i = 0;
+
+    *err = MACAROON_INVALID;
+    j2b_skip_whitespace(ptr, end);
+    if (*ptr >= end) goto invalid;
+    if (**ptr != '{') goto invalid;
+    ++*ptr;
+    int first = 1;
+
+    while (*ptr < end)
+    {
+        j2b_skip_whitespace(ptr, end);
+
+        if (*ptr < end && **ptr == '}')
+        {
+            break;
+        }
+
+        if (!first)
+        {
+            if (*ptr >= end || **ptr != ',') goto invalid;
+            ++*ptr;
+        }
+
+        first = 0;
+        j2b_skip_whitespace(ptr, end);
+
+        if (*ptr >= end || **ptr != '"' ||
+            j2b_string(ptr, end, err, &s) < 0)
+        {
+            goto invalid;
+        }
+
+        j2b_skip_whitespace(ptr, end);
+        if (*ptr >= end || **ptr != ':') goto invalid;
+        ++*ptr;
+        j2b_skip_whitespace(ptr, end);
+
+        if (s.size == 1 && memcmp("v", s.data, s.size) == 0)
+        {
+            if (**ptr != '2') goto invalid;
+            ++*ptr;
+            j2b_skip_whitespace(ptr, end);
+        }
+        else if (s.size == 1 && memcmp("i", s.data, s.size) == 0)
+        {
+            if (seen_identifier) goto invalid;
+            if (j2b_string(ptr, end, err, &identifier) < 0) goto invalid;
+            seen_identifier = 1;
+        }
+        else if (s.size == 1 && memcmp("l", s.data, s.size) == 0)
+        {
+            if (seen_location) goto invalid;
+            if (j2b_string(ptr, end, err, &location) < 0) goto invalid;
+            seen_location = 1;
+        }
+        else if (s.size == 1 && memcmp("s", s.data, s.size) == 0)
+        {
+            if (seen_signature) goto invalid;
+            if (j2b_string(ptr, end, err, &signature) < 0) goto invalid;
+            seen_signature = 1;
+        }
+        else if (s.size == 1 && memcmp("c", s.data, s.size) == 0)
+        {
+            if (seen_caveats) goto invalid;
+            seen_caveats = 1;
+            if (j2b_caveats(ptr, end, err, &caveats, &caveats_sz) < 0) goto error;
+        }
+        else if (s.size == 3 && memcmp("i64", s.data, s.size) == 0)
+        {
+            if (seen_identifier) goto invalid;
+            if (j2b_string(ptr, end, err, &identifier) < 0) goto invalid;
+            seen_identifier = 1;
+
+            if (j2b_b64_decode(&identifier) < 0)
+            {
+                *err = MACAROON_OUT_OF_MEMORY;
+                goto error;
+            }
+        }
+        else if (s.size == 3 && memcmp("l64", s.data, s.size) == 0)
+        {
+            if (seen_location) goto invalid;
+            if (j2b_string(ptr, end, err, &location) < 0) goto invalid;
+            seen_location = 1;
+
+            if (j2b_b64_decode(&location) < 0)
+            {
+                *err = MACAROON_OUT_OF_MEMORY;
+                goto error;
+            }
+        }
+        else if (s.size == 3 && memcmp("s64", s.data, s.size) == 0)
+        {
+            if (seen_signature) goto invalid;
+            if (j2b_string(ptr, end, err, &signature) < 0) goto invalid;
+            seen_signature = 1;
+
+            if (j2b_b64_decode(&signature) < 0)
+            {
+                *err = MACAROON_OUT_OF_MEMORY;
+                goto error;
+            }
+        }
+        else
+        {
+            goto invalid;
+        }
+    }
+
+    /* on a good exit ptr will point to '}', so error out it doesn't, advance
+     * it, skip the whitespace, and error out if there are trailing characters
+     */
+    if (*ptr >= end) goto invalid;
+    ++*ptr;
+    j2b_skip_whitespace(ptr, end);
+    if (*ptr != end) goto invalid;
+
+    /* sanity check */
+    if (!seen_signature || !seen_identifier || !seen_caveats) goto invalid;
+
+    unsigned char* write = NULL;
+    M = macaroon_malloc(caveats_sz, 10000/*body_sz*/, &write);
+
+    if (!M)
+    {
+        *err = MACAROON_OUT_OF_MEMORY;
+        goto error;
+    }
+
+    write = copy_slice(&location, &M->location, write);
+    write = copy_slice(&identifier, &M->identifier, write);
+    write = copy_slice(&signature, &M->signature, write);
+    M->num_caveats = caveats_sz;
+
+    for (i = 0; i < caveats_sz; ++i)
+    {
+        write = copy_slice(&caveats[i].cid, &M->caveats[i].cid, write);
+        write = copy_slice(&caveats[i].vid, &M->caveats[i].vid, write);
+        write = copy_slice(&caveats[i].cl, &M->caveats[i].cl, write);
+    }
+
+    free(caveats);
+    return M;
+
+invalid:
+    *err = MACAROON_INVALID;
+error:
+    if (caveats)
+    {
+        free(caveats);
+    }
+
+    return NULL;
+}
+
+struct macaroon*
+macaroon_deserialize_v2j(const unsigned char* data, size_t data_sz,
+                         enum macaroon_returncode* err)
+{
+    struct macaroon* M = NULL;
+    char* copy = malloc(data_sz);
+    char* ptr = copy;
+    char* const end = ptr + data_sz;
+
+    if (!copy)
+    {
+        *err = MACAROON_OUT_OF_MEMORY;
+        return NULL;
+    }
+
+    memmove(copy, data, data_sz);
+    M = j2b_macaroon(&ptr, end, err);
+    free(copy);
+    return M;
 }

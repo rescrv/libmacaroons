@@ -25,6 +25,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import binascii
+import sys
 
 cdef extern from "stdlib.h":
 
@@ -93,7 +94,7 @@ class Unauthorized(Exception): pass
 
 
 cdef bytes tobytes(s):
-    if type(s) in (unicode, str):
+    if type(s) in (unicode, str) and sys.version_info.major >= 3:
         return s.encode('utf8')
     elif type(s) is bytes:
         return s
