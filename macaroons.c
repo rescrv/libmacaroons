@@ -966,7 +966,9 @@ macaroon_serialize_size_hint(const struct macaroon* M,
         case MACAROON_V2:
             return macaroon_serialize_size_hint_v2(M);
         case MACAROON_V2J:
+#ifdef MACAROONS_JSON
             return macaroon_serialize_size_hint_v2j(M);
+#endif
         default:
             return 0;
     }
@@ -986,8 +988,14 @@ macaroon_serialize(const struct macaroon* M,
         case MACAROON_V2:
             return macaroon_serialize_v2(M, buf, buf_sz, err);
         case MACAROON_V2J:
+#ifdef MACAROONS_JSON
             return macaroon_serialize_v2j(M, buf, buf_sz, err);
+#else
+            *err = MACAROON_NO_JSON_SUPPORT;
+            return 0;
+#endif
         default:
+            *err = MACAROON_INVALID;
             return 0;
     }
 }
@@ -1011,7 +1019,12 @@ macaroon_deserialize(const unsigned char* data, size_t data_sz,
 
     if (data[0] == '{')
     {
+#ifdef MACAROONS_JSON
         return macaroon_deserialize_v2j(data, data_sz, err);
+#else
+        *err = MACAROON_NO_JSON_SUPPORT;
+        return 0;
+#endif
     }
     else if (data[0] == '\x02')
     {

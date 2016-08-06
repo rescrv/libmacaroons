@@ -59,6 +59,14 @@ fi
 
 AM_CONDITIONAL([ENABLE_PYTHON_BINDINGS], [test x"${python_bindings}" = xyes])
 
+AC_ARG_ENABLE([json_support_that_is_not_production_ready], [AS_HELP_STRING([--enable-json-support-that-is-not-production-ready],
+              [support experimental JSON format @<:@default: no@:>@])],
+              [json_support_that_is_not_production_ready=${enableval}],
+              [json_support_that_is_not_production_ready=no])
+if test x"${json_support_that_is_not_production_ready}" = xyes; then
+    AC_DEFINE([MACAROONS_JSON], [], [Enable experimental JSON])
+fi
+
 AH_BOTTOM([#include <custom-config.h>])
 AC_CONFIG_FILES([Makefile
                  libmacaroons.pc])

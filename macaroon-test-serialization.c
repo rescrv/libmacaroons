@@ -28,6 +28,10 @@
 
 #define _WITH_GETLINE
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 /* C */
 #include <assert.h>
 #include <stdio.h>
@@ -98,7 +102,12 @@ main(int argc, const char* argv[])
         }
         else if (strcmp(line, "v2j") == 0)
         {
+#ifdef MACAROONS_JSON
             format = MACAROON_V2J;
+#else
+            printf("format v2j not supported\n");
+            continue;
+#endif
         }
         else
         {
