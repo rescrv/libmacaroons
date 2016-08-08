@@ -44,8 +44,9 @@
 
 struct parsed_macaroon
 {
-    enum macaroon_format F;
+    unsigned char* B;
     struct macaroon* M;
+    enum macaroon_format F;
 };
 
 int
@@ -53,10 +54,12 @@ main(int argc, const char* argv[])
 {
     char* line = NULL;
     size_t line_sz = 0;
+    struct parsed_macaroon* tmp = NULL;
     struct parsed_macaroon* macaroons = NULL;
     size_t macaroons_sz = 0;
     size_t i;
     size_t j;
+    int ret = EXIT_SUCCESS;
 
     while (1)
     {
@@ -70,7 +73,7 @@ main(int argc, const char* argv[])
             }
 
             fprintf(stderr, "could not read from stdin: %s\n", strerror(ferror(stdin)));
-            return EXIT_FAILURE;
+            goto fail;
         }
 
         if (!line || amt == 0 || *line == '\n' || *line == '#')
@@ -85,7 +88,7 @@ main(int argc, const char* argv[])
         if (!space)
         {
             fprintf(stderr, "space missing on line %lu\n", macaroons_sz + 1);
-            return EXIT_FAILURE;
+            goto fail;
         }
 
         assert(space < end);
@@ -112,7 +115,7 @@ main(int argc, const char* argv[])
         else
         {
             fprintf(stderr, "version %s not supported\n", line);
-            return EXIT_FAILURE;
+            goto fail;
         }
 
         size_t buf_sz = strlen(space + 1);
@@ -120,15 +123,16 @@ main(int argc, const char* argv[])
 
         if (!buf)
         {
-            return EXIT_FAILURE;
+            goto fail;
         }
 
+        memset(buf, 0, sizeof(buf));
         int rc = b64_pton(space + 1, buf, buf_sz);
 
         if (rc < 0)
         {
             fprintf(stderr, "could not unwrap serialized macaroon\n");
-            return EXIT_FAILURE;
+            goto fail;
         }
 
         enum macaroon_returncode err;
@@ -137,22 +141,24 @@ main(int argc, const char* argv[])
         if (!M)
         {
             fprintf(stderr, "could not deserialize macaroon: %s\n", macaroon_error(err));
-            return EXIT_FAILURE;
+            goto fail;
         }
 
         ++macaroons_sz;
-        macaroons = realloc(macaroons, macaroons_sz * sizeof(struct parsed_macaroon));
+        tmp = realloc(macaroons, macaroons_sz * sizeof(struct parsed_macaroon));
 
-        if (!macaroons)
+        if (!tmp)
         {
-            return EXIT_FAILURE;
+            goto fail;
         }
 
+        macaroons = tmp;
         macaroons[macaroons_sz - 1].F = format;
         macaroons[macaroons_sz - 1].M = M;
+        macaroons[macaroons_sz - 1].B = buf;
     }
 
-    int ret = EXIT_SUCCESS;
+    ret = EXIT_SUCCESS;
 
     for (i = 0; i < macaroons_sz; ++i)
     {
@@ -164,6 +170,35 @@ main(int argc, const char* argv[])
                 ret = EXIT_FAILURE;
             }
         }
+    }
+
+    goto exit;
+
+fail:
+    ret = EXIT_FAILURE;
+
+exit:
+    if (line)
+    {
+        free(line);
+    }
+
+    for (i = 0; i < macaroons_sz; ++i)
+    {
+        if (macaroons[i].B)
+        {
+            free(macaroons[i].B);
+        }
+
+        if (macaroons[i].M)
+        {
+            macaroon_destroy(macaroons[i].M);
+        }
+    }
+
+    if (macaroons)
+    {
+        free(macaroons);
     }
 
     (void) argc;

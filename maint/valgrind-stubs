@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+
+import os
+import os.path
+import stat
+
+def lines():
+    for line in open('Makefile.am'):
+        yield 'file', line
+        x = line.split('+=')
+        if len(x) != 2: continue
+        if x[0].strip() != 'macaroon_unit_test_stubs': continue
+        g = x[1].strip()
+        if not g.endswith('.sh'): continue
+        if g.endswith('.valgrind.sh'): continue
+        if not os.path.exists(g): continue
+        v = g[:-len('.sh')] + '.valgrind.sh'
+        f = open(v, 'w')
+        f.write('#!/bin/sh\n')
+        f.write('valgrind --tool=memcheck --trace-children=yes --error-exitcode=127 --leak-check=full --gen-suppressions=all --suppressions="${MACAROONS_SRCDIR}/macaroons.supp" ')
+        f.write('"${MACAROONS_SRCDIR}/' + g + '"\n')
+        f.flush()
+        f.close()
+        os.chmod(v, stat.S_IRWXU)
+        yield 'auto', (x[0] + '+= ' + v + '\n')
+
+prev = None
+fout = open('Makefile.am.tmp', 'w')
+for line in lines():
+    if prev is None or prev[0] != 'auto' or prev[1] != line[1]:
+        fout.write(line[1])
+    prev = line
+fout.flush()
+fout.close
+os.rename('Makefile.am.tmp', 'Makefile.am')

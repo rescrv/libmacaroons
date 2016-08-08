@@ -207,6 +207,7 @@ macaroon_deserialize_v1(const char* _data, const size_t _data_sz, enum macaroon_
     if (data[0] == '{')
     {
         *err = MACAROON_NO_JSON_SUPPORT;
+        free(data);
         return NULL;
     }
 
@@ -333,6 +334,7 @@ macaroon_deserialize_v1(const char* _data, const size_t _data_sz, enum macaroon_
         return NULL;
     }
 
+    free(data);
     *err = MACAROON_SUCCESS;
     return M;
 }

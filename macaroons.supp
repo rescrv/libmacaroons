@@ -1,0 +1,41 @@
+{
+    <bash>
+    Memcheck:Leak
+    ...
+    obj:*/bash
+    ...
+}
+{
+    <sed>
+    Memcheck:Leak
+    ...
+    obj:*/sed
+    ...
+}
+{
+    <gcc>
+    Memcheck:Leak
+    ...
+    obj:*/gcc
+    ...
+}
+{
+    <ld>
+    Memcheck:Leak
+    ...
+    obj:*/ld
+    ...
+}
+{
+    <ld>
+    Memcheck:Leak
+    ...
+    obj:*/collect2
+    ...
+}
+{
+    <base64>
+    Memcheck:Cond
+    fun:b64_pton
+    ...
+}

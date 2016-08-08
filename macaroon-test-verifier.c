@@ -109,6 +109,7 @@ parse_macaroon(const char* line, struct macaroon*** macaroons, size_t* macaroons
 {
     size_t buf_sz = strlen(line);
     unsigned char* buf = malloc(buf_sz);
+    struct macaroon** tmp;
 
     if (!buf)
     {
@@ -120,11 +121,13 @@ parse_macaroon(const char* line, struct macaroon*** macaroons, size_t* macaroons
     if (rc < 0)
     {
         fprintf(stderr, "could not unwrap serialized macaroon\n");
+        free(buf);
         return -1;
     }
 
     enum macaroon_returncode err;
     struct macaroon* M = macaroon_deserialize(buf, rc, &err);
+    free(buf);
 
     if (!M)
     {
@@ -133,13 +136,14 @@ parse_macaroon(const char* line, struct macaroon*** macaroons, size_t* macaroons
     }
 
     ++*macaroons_sz;
-    *macaroons = realloc(*macaroons, *macaroons_sz * sizeof(struct macaroon*));
+    tmp = realloc(*macaroons, *macaroons_sz * sizeof(struct macaroon*));
 
-    if (!*macaroons)
+    if (!tmp)
     {
         return -1;
     }
 
+    *macaroons = tmp;
     (*macaroons)[*macaroons_sz - 1] = M;
     return 0;
 }
@@ -155,11 +159,13 @@ main(int argc, const char* argv[])
     struct macaroon_verifier* V = NULL;
     struct macaroon** macaroons = NULL;
     size_t macaroons_sz = 0;
+    size_t i = 0;
+    int ret = EXIT_SUCCESS;
 
     if (!(V = macaroon_verifier_create()))
     {
         fprintf(stderr, "could not create verifier: %s\n", strerror(ferror(stdin)));
-        return EXIT_FAILURE;
+        goto fail;
     }
 
     while (1)
@@ -174,7 +180,7 @@ main(int argc, const char* argv[])
             }
 
             fprintf(stderr, "could not read from stdin: %s\n", strerror(ferror(stdin)));
-            return EXIT_FAILURE;
+            goto fail;
         }
 
         if (!line || amt == 0 || *line == '\n' || *line == '#')
@@ -188,7 +194,7 @@ main(int argc, const char* argv[])
         {
             if (parse_version(line) < 0)
             {
-                return EXIT_FAILURE;
+                goto fail;
             }
         }
         else if (strcmp(line, AUTHORIZED) == 0)
@@ -203,14 +209,14 @@ main(int argc, const char* argv[])
         {
             if (parse_key(line, &key, &key_sz) < 0)
             {
-                return EXIT_FAILURE;
+                goto fail;
             }
         }
         else if (strncmp(line, EXACT, STRLENOF(EXACT)) == 0)
         {
             if (parse_exact_caveat(line, V) < 0)
             {
-                return EXIT_FAILURE;
+                goto fail;
             }
         }
         else if (strncmp(line, GENERAL, STRLENOF(GENERAL)) == 0)
@@ -219,14 +225,14 @@ main(int argc, const char* argv[])
         }
         else if (parse_macaroon(line, &macaroons, &macaroons_sz) < 0)
         {
-            return EXIT_FAILURE;
+            goto fail;
         }
     }
 
     if (macaroons_sz == 0)
     {
         fprintf(stderr, "no macaroons provided\n");
-        return EXIT_FAILURE;
+        goto fail;
     }
 
     enum macaroon_returncode err;
@@ -236,21 +242,27 @@ main(int argc, const char* argv[])
     if (verify != 0 && err != MACAROON_NOT_AUTHORIZED)
     {
         fprintf(stderr, "verification encountered exceptional error: %s\n", macaroon_error(err));
-        return -1;
+        goto fail;
     }
 
     if (verify == 0 && !authorized)
     {
         fprintf(stderr, "verification passed for \"unauthorized\" scenario\n");
-        return -1;
+        goto fail;
     }
 
     if (verify != 0 && err == MACAROON_NOT_AUTHORIZED && authorized)
     {
         fprintf(stderr, "verification failed for \"authorized\" scenario\n");
-        return -1;
+        goto fail;
     }
 
+    goto exit;
+
+fail:
+    ret = EXIT_FAILURE;
+
+exit:
     if (line)
     {
         free(line);
@@ -261,7 +273,25 @@ main(int argc, const char* argv[])
         free(key);
     }
 
+    for (i = 0; i < macaroons_sz; ++i)
+    {
+        if (macaroons[i])
+        {
+            macaroon_destroy(macaroons[i]);
+        }
+    }
+
+    if (macaroons)
+    {
+        free(macaroons);
+    }
+
+    if (V)
+    {
+        macaroon_verifier_destroy(V);
+    }
+
     (void) argc;
     (void) argv;
-    return EXIT_SUCCESS;
+    return ret;
 }
