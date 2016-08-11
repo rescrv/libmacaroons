@@ -22,6 +22,9 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_PROG_CC
 AC_PROG_CXX
 
+AS_IF([make -h 2>/dev/null | grep no-print-directory > /dev/null], [make_no_print=yes])
+AM_CONDITIONAL([MAKE_NO_PRINT_DIRECTORY], [test x"${make_no_print}" != x])
+
 ANAL_WARNINGS
 
 # Checks for libraries.

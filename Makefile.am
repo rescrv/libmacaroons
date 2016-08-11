@@ -25,9 +25,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
-AM_MAKEFLAGS = --no-print-directory
 AM_CFLAGS   = -fvisibility=hidden $(WANAL_CFLAGS)
 AM_CXXFLAGS = -fvisibility=hidden -fvisibility-inlines-hidden $(WANAL_CXXFLAGS)
+if MAKE_NO_PRINT_DIRECTORY
+AM_MAKEFLAGS = --no-print-directory
+endif
 
 AM_DISTCHECK_CONFIGURE_FLAGS = --enable-python-bindings PYTHON=python2
 TESTS_ENVIRONMENT = . $(abs_top_srcdir)/test/env.sh "${abs_top_srcdir}" "${abs_top_builddir}" "${VERSION}";
