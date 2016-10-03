@@ -349,7 +349,7 @@ macaroon_add_third_party_caveat_raw(const struct macaroon* N,
     unsigned char new_sig[MACAROON_HASH_BYTES];
     unsigned char enc_nonce[MACAROON_SECRET_NONCE_BYTES];
     unsigned char enc_plaintext[MACAROON_SECRET_TEXT_ZERO_BYTES + MACAROON_HASH_BYTES];
-    unsigned char enc_ciphertext[MACAROON_SECRET_BOX_ZERO_BYTES + MACAROON_HASH_BYTES];
+    unsigned char enc_ciphertext[MACAROON_SECRET_TEXT_ZERO_BYTES + MACAROON_HASH_BYTES];
     unsigned char vid[VID_NONCE_KEY_SZ];
     size_t i;
     size_t sz;
