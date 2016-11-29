@@ -89,6 +89,7 @@ EXTRA_DIST += test/env.sh
 EXTRA_DIST += test/python-hmac-sanity-check
 EXTRA_DIST += test/python-hmac-sanity-check.sh
 EXTRA_DIST += test/readme.sh
+EXTRA_DIST += macaroons.supp
 
 check_SCRIPTS =
 check_LTLIBRARIES = libmacaroons-shim.la
