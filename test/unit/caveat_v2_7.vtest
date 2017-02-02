@@ -1,8 +1,6 @@
-# a simple test of a macaroon with two exact caveats verified with the correct
-# root key and verifier
+# a test of authorized macaroons with UTF-8 caveats
 version 2
 authorized
 key this is the key
-exact account = 3735928559
-exact user = alice
+exact user = Escrivá
 AgETaHR0cDovL2V4YW1wbGUub3JnLwIFa2V5aWQAAhRhY2NvdW50ID0gMzczNTkyODU1OQACDHVzZXIgPSBhbGljZQAABiBL6WfNHqDGsmuvakqU7psFsViG2guoXoxCqTyNDhJe_A

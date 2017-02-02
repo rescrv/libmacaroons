@@ -160,6 +160,10 @@ macaroon_unit_test_stubs += test/unit/serialization_2.sh
 macaroon_unit_test_stubs += test/unit/serialization_2.valgrind.sh
 macaroon_unit_test_stubs += test/unit/serialization_3.sh
 macaroon_unit_test_stubs += test/unit/serialization_3.valgrind.sh
+macaroon_unit_test_stubs += test/unit/serialization_4.sh
+macaroon_unit_test_stubs += test/unit/serialization_4.valgrind.sh
+macaroon_unit_test_stubs += test/unit/serialization_5.sh
+macaroon_unit_test_stubs += test/unit/serialization_5.valgrind.sh
 
 TESTS += $(macaroon_unit_test_stubs)
 check_SCRIPTS += $(macaroon_unit_test_stubs)
@@ -184,6 +188,8 @@ EXTRA_DIST += test/unit/root_v2_2.vtest
 EXTRA_DIST += test/unit/serialization_1
 EXTRA_DIST += test/unit/serialization_2
 EXTRA_DIST += test/unit/serialization_3
+EXTRA_DIST += test/unit/serialization_4
+EXTRA_DIST += test/unit/serialization_5
 
 #################################### Python ####################################
 

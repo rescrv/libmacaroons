@@ -1,6 +1,6 @@
 # a simple test of a macaroon with two exact caveats verified with the correct
 # root key and incomplete verifier
-version 1
+version 2
 unauthorized
 key this is the key
 exact user = alice

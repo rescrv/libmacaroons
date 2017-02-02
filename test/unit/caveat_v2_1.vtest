@@ -1,6 +1,6 @@
 # a simple test of a macaroon with an exact caveat verified with the correct
 # root key and verifier
-version 1
+version 2
 authorized
 key this is the key
 exact account = 3735928559

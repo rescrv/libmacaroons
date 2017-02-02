@@ -1,6 +1,6 @@
 # a simple test of a macaroon with an exact caveat verified with an incorrect
 # root key with a verifier lacking the correct context
-version 1
+version 2
 unauthorized
 key this is the key
 AgETaHR0cDovL2V4YW1wbGUub3JnLwIFa2V5aWQAAhRhY2NvdW50ID0gMzczNTkyODU1OQAABiD1SAf23G7fiL8PcwazgiVio2JTPb9zObphdl2kvSWdhw

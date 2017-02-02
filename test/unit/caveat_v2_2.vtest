@@ -1,6 +1,6 @@
 # a simple test of a macaroon with an exact caveat verified with an incorrect
 # root key with a verifier built for another context
-version 1
+version 2
 unauthorized
 key this is the key
 exact account = 0000000000
