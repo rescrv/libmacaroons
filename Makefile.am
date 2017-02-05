@@ -146,6 +146,8 @@ macaroon_unit_test_stubs += test/unit/caveat_v2_6.vtest.sh
 macaroon_unit_test_stubs += test/unit/caveat_v2_6.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/caveat_v2_7.vtest.sh
 macaroon_unit_test_stubs += test/unit/caveat_v2_7.vtest.valgrind.sh
+macaroon_unit_test_stubs += test/unit/caveat_v2_8.vtest.sh
+macaroon_unit_test_stubs += test/unit/caveat_v2_8.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/root_v1_1.vtest.sh
 macaroon_unit_test_stubs += test/unit/root_v1_1.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/root_v1_2.vtest.sh
@@ -164,6 +166,8 @@ macaroon_unit_test_stubs += test/unit/serialization_4.sh
 macaroon_unit_test_stubs += test/unit/serialization_4.valgrind.sh
 macaroon_unit_test_stubs += test/unit/serialization_5.sh
 macaroon_unit_test_stubs += test/unit/serialization_5.valgrind.sh
+macaroon_unit_test_stubs += test/unit/serialization_6.sh
+macaroon_unit_test_stubs += test/unit/serialization_6.valgrind.sh
 
 TESTS += $(macaroon_unit_test_stubs)
 check_SCRIPTS += $(macaroon_unit_test_stubs)
@@ -181,6 +185,7 @@ EXTRA_DIST += test/unit/caveat_v2_4.vtest
 EXTRA_DIST += test/unit/caveat_v2_5.vtest
 EXTRA_DIST += test/unit/caveat_v2_6.vtest
 EXTRA_DIST += test/unit/caveat_v2_7.vtest
+EXTRA_DIST += test/unit/caveat_v2_8.vtest
 EXTRA_DIST += test/unit/root_v1_1.vtest
 EXTRA_DIST += test/unit/root_v1_2.vtest
 EXTRA_DIST += test/unit/root_v2_1.vtest
@@ -190,6 +195,7 @@ EXTRA_DIST += test/unit/serialization_2
 EXTRA_DIST += test/unit/serialization_3
 EXTRA_DIST += test/unit/serialization_4
 EXTRA_DIST += test/unit/serialization_5
+EXTRA_DIST += test/unit/serialization_6
 
 #################################### Python ####################################
 
@@ -224,6 +230,7 @@ bindings/python/macaroons.c: bindings/python/macaroons.pyx
 ################################################################################
 
 EXTRA_DIST += maint/generate-shell-stubs
+EXTRA_DIST += maint/valgrind-stubs
 
 maintainer-generate:
 	maint/generate-shell-stubs

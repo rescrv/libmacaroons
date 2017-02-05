@@ -431,6 +431,7 @@ json_emit_string(const char* str, size_t str_sz,
                  unsigned char** ptr,
                  unsigned char* const end)
 {
+    // XXX handle embeded " chars and UTF-8
     if (*ptr + str_sz + 2 > end) return -1;
     json_emit_char('"', ptr, end);
     memmove(*ptr, str, str_sz);
@@ -589,9 +590,9 @@ json_emit_buf_too_small:
  */
 
 void
-j2b_skip_whitespace(char** ptr, char* end)
+j2b_skip_whitespace(char** ptr, char** end)
 {
-    while (*ptr < end)
+    while (*ptr < *end)
     {
         if (!isspace(**ptr))
         {
@@ -603,32 +604,40 @@ j2b_skip_whitespace(char** ptr, char* end)
 }
 
 int
-j2b_string(char** ptr, char* end,
+j2b_string(char** ptr, char** end,
            enum macaroon_returncode* err, struct slice* s)
 {
     *err = MACAROON_INVALID;
-    assert(*ptr < end);
+    assert(*ptr < *end);
     assert(**ptr == '"');
     ++*ptr;
     s->data = (const unsigned char*)*ptr;
 
-    while (*ptr < end)
+    while (*ptr < *end)
     {
         if (**ptr == '\\')
         {
-            if (*ptr + 1 >= end)
+            if (*ptr + 1 >= *end)
             {
                 return -1;
             }
 
-            if ((*ptr)[1] == 'u')
+            if ((*ptr)[1] == '"')
             {
-                if (*ptr + 6 >= end)
+                memmove(*ptr, *ptr + 1, *end - *ptr - 1);
+                --*end;
+                **end = '\0';
+                *ptr += 2;
+            }
+            else if ((*ptr)[1] == 'u')
+            {
+                if (*ptr + 6 >= *end)
                 {
                     return -1;
                 }
 
                 *ptr += 6;
+                return -1; // XXX decode unicode
             }
             else
             {
@@ -645,7 +654,7 @@ j2b_string(char** ptr, char* end,
         }
     }
 
-    if (*ptr >= end)
+    if (*ptr >= *end)
     {
         return -1;
     }
@@ -683,7 +692,7 @@ j2b_b64_decode(struct slice* s)
 }
 
 int
-j2b_caveat(char** ptr, char* end, enum macaroon_returncode* err, struct caveat* caveat)
+j2b_caveat(char** ptr, char** end, enum macaroon_returncode* err, struct caveat* caveat)
 {
     struct slice s = EMPTY_SLICE;
     struct slice cl = EMPTY_SLICE;
@@ -693,37 +702,37 @@ j2b_caveat(char** ptr, char* end, enum macaroon_returncode* err, struct caveat* 
     int seen_cid = 0;
     int seen_vid = 0;
 
-    if (*ptr >= end) return -1;
+    if (*ptr >= *end) return -1;
     if (**ptr != '{') return -1;
     ++*ptr;
     int first = 1;
 
-    while (*ptr < end)
+    while (*ptr < *end)
     {
         j2b_skip_whitespace(ptr, end);
 
-        if (*ptr < end && **ptr == '}')
+        if (*ptr < *end && **ptr == '}')
         {
             break;
         }
 
         if (!first)
         {
-            if (*ptr >= end || **ptr != ',') return -1;
+            if (*ptr >= *end || **ptr != ',') return -1;
             ++*ptr;
         }
 
         first = 0;
         j2b_skip_whitespace(ptr, end);
 
-        if (*ptr >= end || **ptr != '"' ||
+        if (*ptr >= *end || **ptr != '"' ||
             j2b_string(ptr, end, err, &s) < 0)
         {
             return -1;
         }
 
         j2b_skip_whitespace(ptr, end);
-        if (*ptr >= end || **ptr != ':') return -1;
+        if (*ptr >= *end || **ptr != ':') return -1;
         ++*ptr;
         j2b_skip_whitespace(ptr, end);
 
@@ -787,7 +796,7 @@ j2b_caveat(char** ptr, char* end, enum macaroon_returncode* err, struct caveat* 
         }
     }
 
-    if (*ptr >= end) return -1;
+    if (*ptr >= *end) return -1;
     ++*ptr;
     if (!seen_cid) return -1;
     caveat->cid = cid;
@@ -797,7 +806,7 @@ j2b_caveat(char** ptr, char* end, enum macaroon_returncode* err, struct caveat* 
 }
 
 int
-j2b_caveats(char** ptr, char* end, enum macaroon_returncode* err,
+j2b_caveats(char** ptr, char** end, enum macaroon_returncode* err,
             struct caveat** caveats, size_t* caveats_sz)
 {
     struct caveat* tmp = NULL;
@@ -811,11 +820,11 @@ j2b_caveats(char** ptr, char* end, enum macaroon_returncode* err,
         return -1;
     }
 
-    if (*ptr >= end || **ptr != '[') return -1;
+    if (*ptr >= *end || **ptr != '[') return -1;
     ++*ptr;
     j2b_skip_whitespace(ptr, end);
 
-    while (*ptr < end)
+    while (*ptr < *end)
     {
         if (**ptr == ']') break;
 
@@ -836,7 +845,7 @@ j2b_caveats(char** ptr, char* end, enum macaroon_returncode* err,
         if (j2b_caveat(ptr, end, err, *caveats + *caveats_sz) < 0) return -1;
         ++*caveats_sz;
         j2b_skip_whitespace(ptr, end);
-        if (*ptr >= end) return -1;
+        if (*ptr >= *end) return -1;
 
         if (**ptr == ',')
         {
@@ -849,13 +858,13 @@ j2b_caveats(char** ptr, char* end, enum macaroon_returncode* err,
         }
     }
 
-    if (*ptr >= end) return -1;
+    if (*ptr >= *end) return -1;
     ++*ptr;
     return 0;
 }
 
 struct macaroon*
-j2b_macaroon(char** ptr, char* end,
+j2b_macaroon(char** ptr, char** end,
              enum macaroon_returncode* err)
 {
     struct macaroon* M = NULL;
@@ -874,37 +883,37 @@ j2b_macaroon(char** ptr, char* end,
 
     *err = MACAROON_INVALID;
     j2b_skip_whitespace(ptr, end);
-    if (*ptr >= end) goto invalid;
+    if (*ptr >= *end) goto invalid;
     if (**ptr != '{') goto invalid;
     ++*ptr;
     int first = 1;
 
-    while (*ptr < end)
+    while (*ptr < *end)
     {
         j2b_skip_whitespace(ptr, end);
 
-        if (*ptr < end && **ptr == '}')
+        if (*ptr < *end && **ptr == '}')
         {
             break;
         }
 
         if (!first)
         {
-            if (*ptr >= end || **ptr != ',') goto invalid;
+            if (*ptr >= *end || **ptr != ',') goto invalid;
             ++*ptr;
         }
 
         first = 0;
         j2b_skip_whitespace(ptr, end);
 
-        if (*ptr >= end || **ptr != '"' ||
+        if (*ptr >= *end || **ptr != '"' ||
             j2b_string(ptr, end, err, &s) < 0)
         {
             goto invalid;
         }
 
         j2b_skip_whitespace(ptr, end);
-        if (*ptr >= end || **ptr != ':') goto invalid;
+        if (*ptr >= *end || **ptr != ':') goto invalid;
         ++*ptr;
         j2b_skip_whitespace(ptr, end);
 
@@ -983,10 +992,10 @@ j2b_macaroon(char** ptr, char* end,
     /* on a good exit ptr will point to '}', so error out it doesn't, advance
      * it, skip the whitespace, and error out if there are trailing characters
      */
-    if (*ptr >= end) goto invalid;
+    if (*ptr >= *end) goto invalid;
     ++*ptr;
     j2b_skip_whitespace(ptr, end);
-    if (*ptr != end) goto invalid;
+    if (*ptr != *end) goto invalid;
 
     /* sanity check */
     if (!seen_signature || !seen_identifier || !seen_caveats) goto invalid;
@@ -1033,7 +1042,7 @@ macaroon_deserialize_v2j(const unsigned char* data, size_t data_sz,
     struct macaroon* M = NULL;
     char* copy = malloc(data_sz);
     char* ptr = copy;
-    char* const end = ptr + data_sz;
+    char* end = ptr + data_sz;
 
     if (!copy)
     {
@@ -1042,7 +1051,7 @@ macaroon_deserialize_v2j(const unsigned char* data, size_t data_sz,
     }
 
     memmove(copy, data, data_sz);
-    M = j2b_macaroon(&ptr, end, err);
+    M = j2b_macaroon(&ptr, &end, err);
     free(copy);
     return M;
 }
