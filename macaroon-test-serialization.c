@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, Robert Escriva
+/* Copyright (c) 2016-2017, Robert Escriva
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,6 +48,35 @@ struct parsed_macaroon
     struct macaroon* M;
     enum macaroon_format F;
 };
+
+int
+repeated_serialization_cycle(struct macaroon* M, enum macaroon_format F)
+{
+    int ret = 0;
+    char* buf = NULL;
+    size_t buf_sz = 0;
+    struct macaroon* N = NULL;
+    size_t sz;
+    enum macaroon_returncode err;
+
+    buf_sz = macaroon_serialize_size_hint(M, F);
+    buf = malloc(buf_sz);
+    if (!buf) goto fail;
+    sz = macaroon_serialize(M, F, buf, buf_sz, &err);
+    if (sz == 0) goto fail;
+    N = macaroon_deserialize(buf, sz, &err);
+    if (!N) goto fail;
+    ret = macaroon_cmp(M, N);
+    goto done;
+
+fail:
+    ret = -1;
+
+done:
+    if (buf) free(buf);
+    if (N)
+    return ret;
+}
 
 int
 main(int argc, const char* argv[])
@@ -169,6 +198,24 @@ main(int argc, const char* argv[])
                 printf("macaroons %lu and %lu do not match\n", i, j);
                 ret = EXIT_FAILURE;
             }
+        }
+
+        if (repeated_serialization_cycle(macaroons[i].M, MACAROON_V1) != 0)
+        {
+            printf("macaroons %lu does not reserialize via V1\n", i);
+            ret = EXIT_FAILURE;
+        }
+
+        if (repeated_serialization_cycle(macaroons[i].M, MACAROON_V2) != 0)
+        {
+            printf("macaroons %lu does not reserialize via V2\n", i);
+            ret = EXIT_FAILURE;
+        }
+
+        if (repeated_serialization_cycle(macaroons[i].M, MACAROON_V2J) != 0)
+        {
+            printf("macaroons %lu does not reserialize via V2J\n", i);
+            ret = EXIT_FAILURE;
         }
     }
 

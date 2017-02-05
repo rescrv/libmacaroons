@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, Robert Escriva
+/* Copyright (c) 2016-2017, Robert Escriva
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
