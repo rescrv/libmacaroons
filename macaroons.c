@@ -730,6 +730,7 @@ macaroon_verify_inner_3rd(const struct macaroon_verifier* V,
     unsigned char vid_data[VID_NONCE_KEY_SZ];
 
     int fail = 0;
+    int inner = -1;
     size_t midx = 0;
     size_t tidx = 0;
     struct predicate cav;
@@ -752,6 +753,32 @@ macaroon_verify_inner_3rd(const struct macaroon_verifier* V,
         if (macaroon_memcmp(cav.data, mac.data, sz) == 0 && cav.size == mac.size)
         {
             tree[tree_idx] = midx;
+            /* zero everything */
+            macaroon_memzero(enc_key, sizeof(enc_key));
+            macaroon_memzero(enc_plaintext, sizeof(enc_plaintext));
+            macaroon_memzero(enc_ciphertext, sizeof(enc_ciphertext));
+
+            vid.data = vid_data;
+            vid.size = sizeof(vid_data);
+            unstruct_slice(&C->vid, &vid.data, &vid.size);
+            assert(vid.size == VID_NONCE_KEY_SZ);
+            /*
+             * the nonce is in the first MACAROON_SECRET_NONCE_BYTES
+             * of the vid; the ciphertext is in the rest of it.
+             */
+            enc_nonce = vid.data;
+            /* fill in the ciphertext */
+            memmove(enc_ciphertext + MACAROON_SECRET_BOX_ZERO_BYTES,
+                    vid.data + MACAROON_SECRET_NONCE_BYTES,
+                    vid.size - MACAROON_SECRET_NONCE_BYTES);
+            /* now get the plaintext */
+            fail |= macaroon_secretbox_open(sig, enc_nonce, enc_ciphertext,
+                                            sizeof(enc_ciphertext),
+                                            enc_plaintext);
+            inner &= macaroon_verify_inner(V, MS[tree[tree_idx]], TM,
+                                          enc_plaintext + MACAROON_SECRET_TEXT_ZERO_BYTES,
+                                          MACAROON_HASH_BYTES,
+                                          MS, MS_sz, err, tree, tree_idx + 1);
         }
 
         for (tidx = 0; tidx < tree_idx; ++tidx)
@@ -760,38 +787,13 @@ macaroon_verify_inner_3rd(const struct macaroon_verifier* V,
         }
     }
 
-    if (tree[tree_idx] < MS_sz)
+    if (tree[tree_idx] >= MS_sz)
     {
-        /* zero everything */
-        macaroon_memzero(enc_key, sizeof(enc_key));
-        macaroon_memzero(enc_plaintext, sizeof(enc_plaintext));
-        macaroon_memzero(enc_ciphertext, sizeof(enc_ciphertext));
-
-        vid.data = vid_data;
-        vid.size = sizeof(vid_data);
-        unstruct_slice(&C->vid, &vid.data, &vid.size);
-        assert(vid.size == VID_NONCE_KEY_SZ);
-        /*
-         * the nonce is in the first MACAROON_SECRET_NONCE_BYTES
-         * of the vid; the ciphertext is in the rest of it.
-         */
-        enc_nonce = vid.data;
-        /* fill in the ciphertext */
-        memmove(enc_ciphertext + MACAROON_SECRET_BOX_ZERO_BYTES,
-                vid.data + MACAROON_SECRET_NONCE_BYTES,
-                vid.size - MACAROON_SECRET_NONCE_BYTES);
-        /* now get the plaintext */
-        fail |= macaroon_secretbox_open(sig, enc_nonce, enc_ciphertext,
-                                        sizeof(enc_ciphertext),
-                                        enc_plaintext);
-        fail |= macaroon_verify_inner(V, MS[tree[tree_idx]], TM,
-                                      enc_plaintext + MACAROON_SECRET_TEXT_ZERO_BYTES,
-                                      MACAROON_HASH_BYTES,
-                                      MS, MS_sz, err, tree, tree_idx + 1);
+        fail = -1;
     }
     else
     {
-        fail = -1;
+        fail |= inner;
     }
 
     return fail;

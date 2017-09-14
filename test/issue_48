@@ -1,0 +1,24 @@
+import macaroons
+import base64
+import json
+m1 = macaroons.create("", "root-key", "root-id")
+m1 = m1.add_first_party_caveat("wonderful")
+m1 = m1.add_third_party_caveat("bob", "bob-caveat-root-key", "bob-is-great")
+
+m2 = macaroons.create("bob", "bob-caveat-root-key", "bob-is-great")
+m2 = m2.add_first_party_caveat("splendid")
+
+m3 = macaroons.create("bob", "bob-caveat-root-key", "bob-is-great")
+m3 = m3.add_first_party_caveat("top of the world")
+
+m2 = m1.prepare_for_request(m2)
+m3 = m1.prepare_for_request(m3)
+checked = []
+def check(cond):
+        checked.append(cond)
+        return True
+v = macaroons.Verifier()
+v.satisfy_general(check)
+v.verify(m1, "root-key", [m2, m3])
+checked.sort()
+assert checked == ['splendid', 'top of the world', 'wonderful']

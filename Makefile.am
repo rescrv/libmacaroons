@@ -121,43 +121,24 @@ macaroon_test_serialization_CFLAGS = $(AM_CFLAGS) $(CFLAGS)
 
 macaroon_unit_test_stubs =
 macaroon_unit_test_stubs += test/unit/caveat_v1_1.vtest.sh
-macaroon_unit_test_stubs += test/unit/caveat_v1_1.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/caveat_v1_2.vtest.sh
-macaroon_unit_test_stubs += test/unit/caveat_v1_2.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/caveat_v1_3.vtest.sh
-macaroon_unit_test_stubs += test/unit/caveat_v1_3.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/caveat_v1_4.vtest.sh
-macaroon_unit_test_stubs += test/unit/caveat_v1_4.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/caveat_v1_5.vtest.sh
-macaroon_unit_test_stubs += test/unit/caveat_v1_5.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/caveat_v1_6.vtest.sh
-macaroon_unit_test_stubs += test/unit/caveat_v1_6.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/caveat_v2_1.vtest.sh
-macaroon_unit_test_stubs += test/unit/caveat_v2_1.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/caveat_v2_2.vtest.sh
-macaroon_unit_test_stubs += test/unit/caveat_v2_2.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/caveat_v2_3.vtest.sh
-macaroon_unit_test_stubs += test/unit/caveat_v2_3.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/caveat_v2_4.vtest.sh
-macaroon_unit_test_stubs += test/unit/caveat_v2_4.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/caveat_v2_5.vtest.sh
-macaroon_unit_test_stubs += test/unit/caveat_v2_5.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/caveat_v2_6.vtest.sh
-macaroon_unit_test_stubs += test/unit/caveat_v2_6.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/root_v1_1.vtest.sh
-macaroon_unit_test_stubs += test/unit/root_v1_1.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/root_v1_2.vtest.sh
-macaroon_unit_test_stubs += test/unit/root_v1_2.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/root_v2_1.vtest.sh
-macaroon_unit_test_stubs += test/unit/root_v2_1.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/root_v2_2.vtest.sh
-macaroon_unit_test_stubs += test/unit/root_v2_2.vtest.valgrind.sh
 macaroon_unit_test_stubs += test/unit/serialization_1.sh
-macaroon_unit_test_stubs += test/unit/serialization_1.valgrind.sh
 macaroon_unit_test_stubs += test/unit/serialization_2.sh
-macaroon_unit_test_stubs += test/unit/serialization_2.valgrind.sh
 macaroon_unit_test_stubs += test/unit/serialization_3.sh
-macaroon_unit_test_stubs += test/unit/serialization_3.valgrind.sh
 
 TESTS += $(macaroon_unit_test_stubs)
 check_SCRIPTS += $(macaroon_unit_test_stubs)
@@ -187,9 +168,12 @@ EXTRA_DIST += test/unit/serialization_3
 pyexec_LTLIBRARIES =
 if ENABLE_PYTHON_BINDINGS
 pyexec_LTLIBRARIES += bindings/python/macaroons.la
+TESTS += test/issue_48.sh
 endif
 
 EXTRA_DIST += bindings/python/macaroons.pyx
+EXTRA_DIST += test/issue_48
+EXTRA_DIST += test/issue_48.sh
 
 bindings_python_macaroons_la_SOURCES = bindings/python/macaroons.c
 bindings_python_macaroons_la_CPPFLAGS =
