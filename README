@@ -539,7 +539,7 @@ would see that the binding process has irreversibly altered their signature(s).
     >>> DP.signature
     'd115ef1c133b1126978d5ab27f69d99ba9d0468cd6c1b7e47b8c1c59019cb019'
 
-The root macaroon ``M'' and its discharge macaroons ``MS'' are ready for the
+The root macaroon ``M'' and its discharge macaroons ``DP'' are ready for the
 request.  Alice can serialize them all and send them to the bank to prove she is
 authorized to access her account.  The bank can verify them using the same
 verifier we built before.  We provide the discharge macaroons as a third
