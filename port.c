@@ -126,7 +126,7 @@ macaroon_secretbox_open(const unsigned char* enc_key,
 void
 macaroon_bin2hex(const unsigned char* bin, size_t bin_sz, char* hex)
 {
-    void* ptr = sodium_bin2hex(hex, bin_sz * 2, bin, bin_sz);
+    void* ptr = sodium_bin2hex(hex, bin_sz * 2 + 1, bin, bin_sz);
     assert(ptr == hex);
 }
 
