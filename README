@@ -524,7 +524,7 @@ Once Alice has both the root macaroon and the discharge macaroon in her
 possession, she can make the request to the target service.  Making a request
 with discharge macaroons is only slightly more complicated than making requests
 with a single macaroon.  In addition to serializing and transmitting all
-involved macaroons, there is preparation step that binds the discharge macaroons
+involved macaroons, there is a preparation step that binds the discharge macaroons
 to the root macaroon.  This binding step ensures that the discharge macaroon is
 useful only when presented alongside the root macaroon.  The root macaroon is
 used to bind the discharge macaroons like this:
