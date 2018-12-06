@@ -33,3 +33,4 @@
 /test/varint
 .idea
 cmake-*
+build
