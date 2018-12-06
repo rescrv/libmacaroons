@@ -37,6 +37,7 @@
 #include "base64.h"
 #include "constants.h"
 #include "varint.h"
+#include "utf8check.h"
 
 #define TYPE_LOCATION 1
 #define TYPE_IDENTIFIER 2
@@ -379,7 +380,10 @@ json_required_field_size(int encoding, const struct slice* f)
     switch (encoding)
     {
         case ENC_STR:
-            return 6 + JSON_MAX_FIELD_SIZE + f->size;
+            // Check if valid UTF-8
+            if(validate_utf8_fast((const char *) f->data, f->size)) {
+                return 6 + JSON_MAX_FIELD_SIZE + f->size;
+            }
         case ENC_B64:
             return 6 + JSON_MAX_FIELD_SIZE + 2 + (8 * f->size + 7) / 6;
         default:
@@ -466,8 +470,6 @@ json_emit_encoded_string(int encoding,
     switch (encoding)
     {
         case ENC_STR:
-            /* XXX check that it is UTF-8 and switch to other case if not */
-            /* XXX if the above XXX is addressed, remember to adjust sz hint */
             return json_emit_string(str, str_sz, ptr, end);
         case ENC_B64:
             return json_emit_string_b64(str, str_sz, ptr, end);
@@ -482,6 +484,11 @@ json_emit_required_field(int comma, int encoding, uint8_t _type,
                          unsigned char** ptr,
                          unsigned char* const end)
 {
+    // If invalid UTF-8 string, then we need to encode it.
+    if (encoding == ENC_STR && !validate_utf8_fast((const char*)f->data, f->size)) {
+        encoding = ENC_B64;
+    }
+
     const char* type = json_field_type_encoded(_type, encoding);
     assert(type);
     const size_t type_sz = strlen(type);

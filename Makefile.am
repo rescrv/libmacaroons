@@ -61,6 +61,7 @@ noinst_HEADERS += tweetnacl.h
 noinst_HEADERS += varint.h
 noinst_HEADERS += v1.h
 noinst_HEADERS += v2.h
+noinst_HEADERS += utf8check.h
 
 lib_LTLIBRARIES = libmacaroons.la
 
