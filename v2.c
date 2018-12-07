@@ -866,10 +866,10 @@ j2b_macaroon(char** ptr, char* end,
              enum macaroon_returncode* err)
 {
     struct macaroon* M = NULL;
-    struct slice s;
-    struct slice location;
-    struct slice identifier;
-    struct slice signature;
+    struct slice s = EMPTY_SLICE;
+    struct slice location = EMPTY_SLICE;
+    struct slice identifier = EMPTY_SLICE;
+    struct slice signature = EMPTY_SLICE;
     int seen_location = 0;
     int seen_identifier = 0;
     int seen_signature = 0;
