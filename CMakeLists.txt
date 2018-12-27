@@ -30,7 +30,7 @@ add_library(macaroons
 target_include_directories(macaroons
         PUBLIC
         $<INSTALL_INTERFACE:include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/macaroons.h>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR})
 
