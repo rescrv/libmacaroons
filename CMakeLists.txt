@@ -28,11 +28,9 @@ add_library(macaroons
         utf8check.h)
 
 target_include_directories(macaroons
-        PUBLIC
-        $<INSTALL_INTERFACE:include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR})
+        INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 # Test
 add_executable(serialize_test macaroon-test-serialization.c)
