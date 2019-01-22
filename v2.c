@@ -996,7 +996,7 @@ j2b_macaroon(char** ptr, char* end,
     if (*ptr != end) goto invalid;
 
     /* sanity check */
-    if (!seen_signature || !seen_identifier || !seen_caveats) goto invalid;
+    if (!seen_signature || !seen_identifier) goto invalid;
 
     unsigned char* write = NULL;
     M = macaroon_malloc(caveats_sz, 10000/*body_sz*/, &write);
