@@ -34,3 +34,4 @@
 .idea
 cmake-*
 build
+test/fuzz-testing

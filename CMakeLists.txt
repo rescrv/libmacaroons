@@ -4,6 +4,13 @@ project(libmacaroons
         LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+# Sanitizers
+set(SANITIZE_ADDRESS ON)
+set(SANITIZE_UNDEFINED ON)
+
+find_package(Sanitizers)
 
 option(JSON_SUPPORT "Enable support for JSON Macaroons" ON)
 
@@ -40,9 +47,15 @@ endif ()
 # Test
 add_executable(serialize_test macaroon-test-serialization.c)
 target_link_libraries(serialize_test macaroons)
+add_sanitizers(serialize_test)
 
 add_executable(verifier_test macaroon-test-verifier.c)
 target_link_libraries(verifier_test macaroons)
+
+# Fuzzers
+add_executable(fuzz_serializer fuzzer-driver_afl.c fuzzer-serializer.c)
+target_link_libraries(fuzz_serializer macaroons)
+add_sanitizers(fuzz_serializer)
 
 # Installation
 include(GnuInstallDirs)
