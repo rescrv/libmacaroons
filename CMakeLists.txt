@@ -5,11 +5,7 @@ project(libmacaroons
 
 set(CMAKE_C_STANDARD 11)
 
-if (APPLE)
-    add_compile_definitions(HAVE_OSX_LIBUTIL_H)
-endif ()
-
-add_compile_definitions(MACAROONS_JSON)
+option(JSON_SUPPORT "Enable support for JSON Macaroons" ON)
 
 add_library(macaroons
         base64.c
@@ -31,6 +27,15 @@ target_include_directories(macaroons
         INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
+if (JSON_SUPPORT)
+    message(STATUS "Enabling JSON support")
+    add_compile_definitions(MACAROONS_JSON)
+endif ()
+
+if (APPLE)
+    target_compile_definitions(macaroons PRIVATE HAVE_OSX_LIBUTIL_H)
+endif ()
 
 # Test
 add_executable(serialize_test macaroon-test-serialization.c)
