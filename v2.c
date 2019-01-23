@@ -904,7 +904,6 @@ j2b_macaroon(char** ptr, char* end,
         first = 0;
         j2b_skip_whitespace(ptr, end);
 
-        // For each key, we need to validate that the beginning and ending quotes are included.
         if (*ptr >= end || **ptr != '"' ||
             j2b_string(ptr, end, err, &s) < 0)
         {
@@ -915,12 +914,6 @@ j2b_macaroon(char** ptr, char* end,
         if (*ptr >= end || **ptr != ':') goto invalid;
         ++*ptr;
         j2b_skip_whitespace(ptr, end);
-
-        if (*ptr >= end || **ptr != '"' ||
-            j2b_string(ptr, end, err, &s) < 0)
-        {
-            goto invalid;
-        }
 
         if (s.size == 1 && memcmp("v", s.data, s.size) == 0)
         {
