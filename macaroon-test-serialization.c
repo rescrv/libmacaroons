@@ -49,6 +49,11 @@ struct parsed_macaroon
     enum macaroon_format F;
 };
 
+size_t
+int2size_t(int val) {
+    return (val < 0) ? __SIZE_MAX__ : (size_t)((unsigned)val);
+}
+
 int
 main(int argc, const char* argv[])
 {
@@ -60,6 +65,9 @@ main(int argc, const char* argv[])
     size_t i;
     size_t j;
     int ret = EXIT_SUCCESS;
+
+    // Open from stdin
+//    freopen("test.file", "r", stdin);
 
     while (1)
     {
@@ -126,7 +134,7 @@ main(int argc, const char* argv[])
             goto fail;
         }
 
-        memset(buf, 0, sizeof(buf));
+        memset(buf, 0, sizeof(*buf));
         int rc = b64_pton(space + 1, buf, buf_sz);
 
         if (rc < 0)

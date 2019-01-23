@@ -21,5 +21,10 @@ fuzzing-stop:
 	-killall fuzzer
 	-killall afl-fuzz
 
+fuzzing-minimize:
+	mkdir -p fuzz-testing/crashes-pre fuzz-testing/crashes
+	find fuzz-testing/out/fuzzer*/crashes -type f -name "id*" | xargs -I{} cp "{}" fuzz-testing/crashes-pre
+	afl-cmin -i fuzz-testing/crashes-pre -o fuzz-testing/crashes -- fuzz-testing/build/fuzz_	serializer
 
-.PHONY: fuzz-testing fuzzing-start fuzzing-stop
+
+.PHONY: fuzz-testing fuzzing-start fuzzing-stop fuzzing-minimize
