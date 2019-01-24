@@ -67,7 +67,7 @@ main(int argc, const char* argv[])
     int ret = EXIT_SUCCESS;
 
     // Open from stdin
-//    freopen("test.file", "r", stdin);
+    freopen("test.file", "r", stdin);
 
     while (1)
     {
@@ -144,7 +144,7 @@ main(int argc, const char* argv[])
         }
 
         enum macaroon_returncode err;
-        struct macaroon* M = macaroon_deserialize(buf, rc, &err);
+        struct macaroon* M = macaroon_deserialize(buf, int2size_t(rc), &err);
 
         if (!M)
         {

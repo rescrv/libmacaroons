@@ -20,13 +20,15 @@ struct parsed_macaroon {
 
 size_t
 int2size_t(int val) {
-    return (val < 0) ? __SIZE_MAX__ : (size_t)((unsigned) val);
+    return (val < 0) ? __SIZE_MAX__ : (size_t) ((unsigned) val);
 }
 
 extern int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
-    char *line = (char *)data;
-    size_t amt = size;
+    fprintf(stderr, "In the fuzzer\n");
+
+    char *line = (char *) data;
+    size_t line_sz = size;
     struct parsed_macaroon *tmp = NULL;
     struct parsed_macaroon *macaroons = NULL;
     size_t macaroons_sz = 0;
@@ -34,75 +36,88 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     size_t j;
     int ret = EXIT_SUCCESS;
 
-    while (1) {
-        if (!line || amt == 0 || *line == '\n' || *line == '#') {
-            continue;
-        }
+//    while (1) {
+//        ssize_t amt = line_from_string(&line, &line_sz, (const char *) data);
 
-        line[amt - 1] = '\0';
-        char *space = strchr(line, ' ');
-        char *const end = line + amt - 1;
+//    if (amt < 0) {
+//        if (feof(stdin) != 0) {
+//            break;
+//        }
+//
+//        fprintf(stderr, "could not read from stdin: %s\n", strerror(ferror(stdin)));
+//        goto fail;
+//    }
 
-        if (!space) {
-            fprintf(stderr, "space missing on line %lu\n", macaroons_sz + 1);
-            goto fail;
-        }
-
-        assert(space < end);
-        *space = '\0';
-        enum macaroon_format format;
-
-        if (strcmp(line, "v1") == 0) {
-            format = MACAROON_V1;
-        } else if (strcmp(line, "v2") == 0) {
-            format = MACAROON_V2;
-        } else if (strcmp(line, "v2j") == 0) {
-#ifdef MACAROONS_JSON
-            format = MACAROON_V2J;
-#else
-            printf("format v2j not supported\n");
-            continue;
-#endif
-        } else {
-            fprintf(stderr, "version %s not supported\n", line);
-            goto fail;
-        }
-
-        size_t buf_sz = strlen(space + 1);
-        unsigned char *buf = malloc(buf_sz);
-
-        if (!buf) {
-            goto fail;
-        }
-
-        memset(buf, 0, sizeof(*buf));
-        int rc = b64_pton(space + 1, buf, buf_sz);
-
-        if (rc < 0) {
-            fprintf(stderr, "could not unwrap serialized macaroon\n");
-            goto fail;
-        }
-
-        enum macaroon_returncode err;
-        struct macaroon *M = macaroon_deserialize(buf, int2size_t(rc), &err);
-
-        if (!M) {
-            fprintf(stderr, "could not deserialize macaroon: %s\n", macaroon_error(err));
-            goto fail;
-        }
-
-        ++macaroons_sz;
-        tmp = realloc(macaroons, macaroons_sz * sizeof(struct parsed_macaroon));
-
-        if (!tmp) {
-            goto fail;
-        }
-
-        macaroons = tmp;
-        macaroons[macaroons_sz - 1].F = format;
-        macaroons[macaroons_sz - 1].M = M;
-        macaroons[macaroons_sz - 1].B = buf;
+    if (!line || size == 0 || *line == '\n' || *line == '#') {
+        goto exit;
     }
+
+    line[size - 1] = '\0';
+    char *space = strchr(line, ' ');
+    char *const end = line + size - 1;
+
+    if (!space) {
+        fprintf(stderr, "space missing on line %lu\n", macaroons_sz + 1);
+        goto fail;
+    }
+
+    assert(space < end);
+    *space = '\0';
+    enum macaroon_format format;
+
+    if (strcmp(line, "v1") == 0) {
+        format = MACAROON_V1;
+    } else if (strcmp(line, "v2") == 0) {
+        format = MACAROON_V2;
+    } else if (strcmp(line, "v2j") == 0) {
+#ifdef MACAROONS_JSON
+        format = MACAROON_V2J;
+#else
+        printf("format v2j not supported\n");
+        continue;
+#endif
+    } else {
+        fprintf(stderr, "version %s not supported\n", line);
+        goto fail;
+    }
+
+    size_t buf_sz = strlen(space + 1);
+    unsigned char *buf = malloc(buf_sz);
+
+    if (!buf) {
+        goto fail;
+    }
+
+    memset(buf, 0, sizeof(*buf));
+    int rc = b64_pton(space + 1, buf, buf_sz);
+
+    if (rc < 0) {
+        fprintf(stderr, "could not unwrap serialized macaroon\n");
+        goto fail;
+    }
+
+    enum macaroon_returncode err;
+    fprintf(stderr, "Deserializing\n");
+    struct macaroon *M = macaroon_deserialize(buf, int2size_t(rc), &err);
+    fprintf(stderr, "Deserialized");
+
+    if (!M) {
+        fprintf(stderr, "could not deserialize macaroon: %s\n", macaroon_error(err));
+        goto fail;
+    }
+
+    ++macaroons_sz;
+    tmp = realloc(macaroons, macaroons_sz * sizeof(struct parsed_macaroon));
+
+    if (!tmp) {
+        goto fail;
+    }
+
+    macaroons = tmp;
+    macaroons[macaroons_sz - 1].F = format;
+    macaroons[macaroons_sz - 1].M = M;
+    macaroons[macaroons_sz - 1].B = buf;
+//    }
 
     ret = EXIT_SUCCESS;
 
@@ -118,12 +133,13 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     goto exit;
 
     fail:
-    ret = EXIT_FAILURE;
+    // We can't return non-zero codes within LLVM
+    ret = EXIT_SUCCESS;
 
     exit:
-    if (line) {
-        free(line);
-    }
+//    if (line) {
+    free(line);
+//    }
 
     for (i = 0; i < macaroons_sz; ++i) {
         if (macaroons[i].B) {
