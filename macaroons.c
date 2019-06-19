@@ -1741,6 +1741,7 @@ macaroon_deserialize(const char* _data, enum macaroon_returncode* err)
         return NULL;
     }
 
+    free(data);
     *err = MACAROON_SUCCESS;
     return M;
 }
