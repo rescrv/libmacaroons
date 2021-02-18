@@ -1020,6 +1020,7 @@ j2b_macaroon(char** ptr, char* end,
     }
 
     free(caveats);
+    *err = MACAROON_SUCCESS;
     return M;
 
 invalid:

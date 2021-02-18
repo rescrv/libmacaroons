@@ -1,0 +1,34 @@
+name: Build and Test
+on: [push]
+
+jobs:
+  job:
+    name: ${{ matrix.os }}-libmacaroons-build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          submodules: true
+      - name: (Linux) Install dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install libbsd-dev
+      - uses: lukka/get-cmake@v3.19.2
+        name: Install cmake
+      - name: Run CMake
+        uses: lukka/run-cmake@v3.3
+        id: runcmake
+        with:
+          cmakeListsOrSettingsJson: "CMakeListsTxtAdvanced"
+          useVcpkgToolchainFile: true
+          buildDirectory: '${{ github.workspace }}/build/'
+      - name: Test
+        working-directory: ./build
+        run: |
+          ctest
