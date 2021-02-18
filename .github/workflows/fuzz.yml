@@ -1,0 +1,58 @@
+name: Fuzz
+on:
+  workflow_dispatch: # because sometimes you just want to force a branch to have tests run
+  push:
+    branches:
+      - "**"
+    paths:
+      - .github/workflows/fuzz.yml
+  schedule:
+    - cron: '0 18 * * *' # Daily at 18:00 UTC
+
+jobs:
+  libfuzzer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: (Linux) Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install libbsd-dev clang-11 libfuzzer-11-dev
+      - uses: lukka/get-cmake@v3.19.2
+        name: Install cmake
+      - uses: lukka/run-cmake@v3.3
+        name: Run CMake
+        id: runcmake
+        with:
+          cmakeListsOrSettingsJson: "CMakeListsTxtAdvanced"
+          buildDirectory: '${{ github.workspace }}/build/'
+          cmakeAppendedArgs: '-DCMAKE_C_COMPILER=/usr/bin/clang-11 -DFUZZ_LIBFUZZER=ON'
+      - name: Fuzz
+        working-directory: ./build
+        run: |
+          ./fuzz_serializer ../corpus -max_len=1 -jobs=1 -max_total_time=3600
+
+  afl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: (Linux) Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install libbsd-dev clang-11 afl++
+      - uses: lukka/get-cmake@v3.19.2
+        name: Install cmake
+      - uses: lukka/run-cmake@v3.3
+        name: Run CMake
+        id: runcmake
+        with:
+          cmakeListsOrSettingsJson: "CMakeListsTxtAdvanced"
+          buildDirectory: '${{ github.workspace }}/build/'
+          cmakeAppendedArgs: '-DCMAKE_C_COMPILER=/usr/bin/afl-clang-fast -DFUZZ_AFL=ON'
+      - name: Set core reporting
+        run: |
+          sudo bash -c 'echo core >/proc/sys/kernel/core_pattern'
+      - name: Fuzz
+        working-directory: ./build
+        run: |
+          timeout 60m afl-fuzz -i ../corpus -o output -m none ./afl_asan_macaroons

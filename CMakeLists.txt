@@ -55,21 +55,28 @@ add_executable(verifier_test macaroon-test-verifier.c)
 target_link_libraries(verifier_test macaroons)
 
 # Build fuzzers
-if (FUZZ)
-    add_executable(fuzz_serializer fuzzer-driver_afl.c fuzzer-serializer.c)
-    target_link_libraries(fuzz_serializer macaroons)
+if (FUZZ_AFL)
+    message("Building AFL target")
+    add_executable(afl_asan_macaroons fuzzer-driver_afl.c fuzzer-serializer.c)
+    target_compile_options(afl_asan_macaroons PRIVATE $<$<C_COMPILER_ID:Clang>:-g -O3 -fsanitize=address>)
+    target_link_libraries(afl_asan_macaroons PRIVATE $<$<C_COMPILER_ID:Clang>:-fsanitize=address> macaroons)
+endif ()
+
+if (FUZZ_LIBFUZZER)
+    if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+        message("Building LibFuzzer target")
+        add_executable(fuzz_serializer fuzzer-serializer.c)
+        target_compile_options(fuzz_serializer PRIVATE $<$<C_COMPILER_ID:Clang>:-g -O3 -fsanitize=fuzzer,address>)
+        target_link_libraries(fuzz_serializer PRIVATE $<$<C_COMPILER_ID:Clang>:-fsanitize=fuzzer,address> macaroons)
+    endif ()
 endif ()
 
 if (WITH_SANITIZERS)
-    set(SANITIZE_ADDRESS ON)
     set(SANITIZE_UNDEFINED ON)
     find_package(Sanitizers)
 
     add_sanitizers(serialize_test)
     add_sanitizers(verifier_test)
-    if (FUZZ)
-        add_sanitizers(fuzz_serializer)
-    endif ()
 endif ()
 
 # Setup unit testing

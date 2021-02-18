@@ -26,7 +26,6 @@ jobs:
         id: runcmake
         with:
           cmakeListsOrSettingsJson: "CMakeListsTxtAdvanced"
-          useVcpkgToolchainFile: true
           buildDirectory: '${{ github.workspace }}/build/'
       - name: Test
         working-directory: ./build
