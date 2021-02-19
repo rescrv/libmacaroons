@@ -27,6 +27,17 @@ AM_CONDITIONAL([MAKE_NO_PRINT_DIRECTORY], [test x"${make_no_print}" != x])
 
 ANAL_WARNINGS
 
+dnl Testing presence of pkg-config
+AC_MSG_CHECKING([pkg-config m4 macros])
+if test m4_ifdef([PKG_CHECK_MODULES], [yes], [no]) == yes; then
+	AC_MSG_RESULT([yes]);
+else
+	AC_MSG_RESULT([no]);
+	AC_MSG_ERROR([
+pkg-config is required.
+See pkg-config.freedesktop.org])
+fi
+
 # Checks for libraries.
 AC_CHECK_FUNC([strlcpy],[BSDLIB=],[BSDLIB=-lbsd])
 AC_SUBST([BSDLIBS], [$BSDLIB])
