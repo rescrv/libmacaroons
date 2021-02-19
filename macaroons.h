@@ -94,6 +94,12 @@ macaroon_destroy(struct macaroon* M);
 int
 macaroon_validate(const struct macaroon* M);
 
+/* Return the number of caveats for the given macaroon.
+ * This includes both first-party and third-party caveats
+ */
+unsigned
+macaroon_num_caveats(const struct macaroon* M);
+
 /* Add a new first party caveat, and return a new macaroon.
  *  - predicate/predicate_sz is the caveat to be added to the macaroon
  *
@@ -103,6 +109,12 @@ struct macaroon*
 macaroon_add_first_party_caveat(const struct macaroon* M,
                                 const unsigned char* predicate, size_t predicate_sz,
                                 enum macaroon_returncode* err);
+
+/* Return the number of first-party caveats for the given macaroon
+ *
+ */
+unsigned
+macaroon_num_first_party_caveats(const struct macaroon* M);
 
 /* Add a new third party caveat, and return a new macaroon.
  *  - location/location_sz is a hint to the third party's location

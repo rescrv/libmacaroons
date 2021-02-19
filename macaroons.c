@@ -468,6 +468,31 @@ macaroon_bind(const unsigned char* Msig,
 }
 
 MACAROON_API unsigned
+macaroon_num_caveats(const struct macaroon* M)
+{
+    VALIDATE(M);
+    return M->num_caveats;
+}
+
+MACAROON_API unsigned
+macaroon_num_first_party_caveats(const struct macaroon* M)
+{
+    size_t idx = 0;
+    unsigned count = 0;
+    VALIDATE(M);
+
+    for (idx = 0; idx < M->num_caveats; ++idx)
+    {
+        if (M->caveats[idx].vid.size == 0 && M->caveats[idx].cl.size == 0)
+        {
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+MACAROON_API unsigned
 macaroon_num_third_party_caveats(const struct macaroon* M)
 {
     size_t idx = 0;

@@ -58,10 +58,10 @@ void verify_macaroon(const struct verifier_test *test) {
     TEST_ASSERT_NOT_NULL_MESSAGE(V, "Verifier should create ok");
 
     // Add all the caveats
-    for(size_t i = 0; i < test->num_caveats; i++) {
-        char* caveat = test->caveats[i];
+    for (size_t i = 0; i < test->num_caveats; i++) {
+        char *caveat = test->caveats[i];
         enum macaroon_returncode err = MACAROON_SUCCESS;
-        macaroon_verifier_satisfy_exact(V, (const unsigned char*)caveat, strlen(caveat), &err);
+        macaroon_verifier_satisfy_exact(V, (const unsigned char *) caveat, strlen(caveat), &err);
         TEST_ASSERT_EQUAL_INT_MESSAGE(MACAROON_SUCCESS, err, "Should have added caveat");
     }
 
@@ -80,8 +80,18 @@ void verify_macaroon(const struct verifier_test *test) {
     macaroons = tmp;
     (macaroons)[macaroons_sz - 1] = M;
 
+    // Look at the first macaroon and make sure it has the correct number of caveats
+    if (test->authorized) {
+        TEST_ASSERT_EQUAL_size_t_MESSAGE(test->num_caveats, macaroon_num_caveats(macaroons[0]),
+                                         "Should have the correct number of caveats");
+        TEST_ASSERT_EQUAL_size_t_MESSAGE(test->num_caveats, macaroon_num_first_party_caveats(macaroons[0]),
+                                         "All caveats should be first-party");
+        TEST_ASSERT_EQUAL_size_t_MESSAGE(0, macaroon_num_third_party_caveats(macaroons[0]),
+                                         "Should not have any third-party caveats");
+    }
+
     // Ok, now let's verify it
-    const size_t key_sz = strlen((const char*)test->key);
+    const size_t key_sz = strlen((const char *) test->key);
     enum macaroon_returncode err;
     int verify = macaroon_verify(V, macaroons[0], test->key, key_sz, macaroons + 1, macaroons_sz - 1, &err);
 
