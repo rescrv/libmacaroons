@@ -1,0 +1,46 @@
+name: Coverity
+on:
+  workflow_dispatch: # because sometimes you just want to force a branch to have tests run
+  push:
+    branches:
+      - "**"
+    paths:
+      - .github/workflows/coverity.yml
+  schedule:
+    - cron: '0 0 1 * *' # Monthly on the 1st at 00:00 UTC
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: (Linux) Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install libbsd-dev
+      - name: Download Coverity Build Tool
+        run: |
+          wget -q https://scan.coverity.com/download/linux64 --post-data "token=${{ secrets.COVERITY_TOKEN }}&project=nickrobison-usds/libmacaroons" -O cov-analysis-linux64.tar.gz
+          mkdir cov-analysis-linux64
+          tar xzf cov-analysis-linux64.tar.gz --strip 1 -C cov-analysis-linux64
+      - uses: lukka/get-cmake@v3.19.2
+        name: Install cmake
+      - name: Run CMake
+        run: |
+          cmake -B build/
+      - name: Build with cov-build
+        working-directory: ./build
+        run: |
+          export PATH=`pwd`/../cov-analysis-linux64/bin:$PATH
+          cov-build --dir cov-int make -j2
+      - name: Submit the result to Coverity Scan
+        working-directory: ./build
+        run: |
+          tar czvf libmacaroons.tgz cov-int
+          curl \
+            --form token=${{ secrets.COVERITY_TOKEN }} \
+            --form email=nicholas.a.robison@omb.eop.gov \
+            --form file=@libmacaroons.tgz \
+            --form version=${{ env.GITHUB_REF }} \
+            --form description="`git rev-parse --short HEAD`" \
+            https://scan.coverity.com/builds?project=nickrobison-usds%2Flibmacaroons
