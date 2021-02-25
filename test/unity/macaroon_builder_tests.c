@@ -131,6 +131,7 @@ TEST(MacaroonBuilderTests, add_third_party_caveat_encoded) {
 
     macaroon_verify(V, M3, secret, strlen(secret), discharges, 1, &err);
     TEST_ASSERT_EQUAL(MACAROON_SUCCESS, err);
+    free(discharges);
 
     macaroon_verify(V, M3, secret, strlen(secret), NULL, 0, &err);
     TEST_ASSERT_EQUAL(MACAROON_NOT_AUTHORIZED, err);
